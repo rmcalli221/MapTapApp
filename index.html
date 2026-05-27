@@ -593,41 +593,56 @@ function teamOf(name){ return PLAYERS.find(p=>p.name===name)?.team ?? null; }
 //   Final score: 962
 function parseShareText(raw) {
   if(!raw || !raw.trim()) return null;
-  const lines = raw.trim().split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Strip any hidden/special unicode characters except emojis and normal text
+  const cleaned = raw.replace(/\r/g, '').trim();
+  const lines = cleaned.split('\n').map(l => l.trim()).filter(Boolean);
   if(lines.length < 3) return null;
 
-  // Line 1: date  "www.maptap.gg May 26"
-  const dateLine = lines[0];
-  const dateMatch = dateLine.match(/(\w+)\s+(\d+)\s*$/);
-  if(!dateMatch) return null;
-  const monthStr = dateMatch[1];
-  const dayNum   = parseInt(dateMatch[2]);
-  const months   = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,
-                    Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
-  const mIdx = months[monthStr];
-  if(mIdx === undefined || isNaN(dayNum)) return null;
-  const year = new Date().getFullYear();
-  const dateStr = `${year}-${pad(mIdx+1)}-${pad(dayNum)}`;
+  // ── DATE: scan all lines for a month name + day number ──
+  const months = {january:0,february:1,march:2,april:3,may:4,june:5,
+                  july:6,august:7,september:8,october:9,november:10,december:11,
+                  jan:0,feb:1,mar:2,apr:3,may:4,jun:5,
+                  jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  let dateStr = null;
+  for(const line of lines) {
+    const m = line.match(/([a-zA-Z]+)\s+(\d{1,2})/);
+    if(m) {
+      const mIdx = months[m[1].toLowerCase()];
+      if(mIdx !== undefined) {
+        const year = new Date().getFullYear();
+        dateStr = `${year}-${pad(mIdx+1)}-${pad(parseInt(m[2]))}`;
+        break;
+      }
+    }
+  }
+  if(!dateStr) return null;
 
-  // Line 2: round scores with emojis  "99🎯 95🏆 96🔥 95🏅 97🔥"
-  const roundLine = lines[1];
-  // Match sequences of digits followed by one or more emoji characters
-  const roundMatches = [...roundLine.matchAll(/(\d+)([\p{Emoji}\uFE0F\u20E3\u200D]+)/gu)];
-  if(roundMatches.length !== 5) return null;
-  const rounds = roundMatches.map(m => ({
-    score: parseInt(m[1]),
-    emoji: m[2]
-  }));
+  // ── FINAL SCORE: scan all lines for "score: NNN" or just last number ──
+  let finalScore = null;
+  for(const line of lines) {
+    const m = line.match(/score[:\s]+(\d+)/i);
+    if(m) { finalScore = parseInt(m[1]); break; }
+  }
+  if(!finalScore) return null;
 
-  // Line 3: final score  "Final score: 962"
-  const finalLine = lines[2];
-  const finalMatch = finalLine.match(/(\d+)\s*$/);
-  if(!finalMatch) return null;
-  const finalScore = parseInt(finalMatch[1]);
+  // ── ROUNDS: find the line with 5 numbers in it ──
+  let rounds = null;
+  for(const line of lines) {
+    // Extract all numbers from the line
+    const nums = [...line.matchAll(/(\d+)/g)].map(m => parseInt(m[1]));
+    if(nums.length !== 5) continue;
 
-  // Validate: sum of rounds should equal final (within rounding)
-  const roundSum = rounds.reduce((a,r)=>a+r.score,0);
-  if(Math.abs(roundSum - finalScore) > 5) return null; // lenient check
+    // Extract emojis — grab everything between/after the numbers
+    const segments = line.split(/\d+/).map(s => s.trim()).filter(Boolean);
+
+    rounds = nums.map((score, i) => ({
+      score,
+      emoji: segments[i] || '🎯'
+    }));
+    break;
+  }
+  if(!rounds) return null;
 
   return { dateStr, rounds, finalScore };
 }
