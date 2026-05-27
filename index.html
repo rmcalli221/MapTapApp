@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MapTap Pool</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Firebase SDK (v9 compat — no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<style>
+/* ── TOKENS ──────────────────────────────────────────────────────── */
+:root {
+  --bg:       #0a0c0f;
+  --surf:     #12151a;
+  --surf2:    #1a1f27;
+  --surf3:    #222834;
+  --border:   #252c38;
+  --border2:  #2e3848;
+
+  --lime:     #c6f135;
+  --mint:     #35f1b0;
+  --gold:     #f1c435;
+  --coral:    #f16035;
+  --sky:      #35b8f1;
+
+  --text:     #dce5f0;
+  --muted:    #4e5e78;
+  --subtle:   #8a9bb8;
+
+  --r:        10px;
+  --font-d:   'Bebas Neue', sans-serif;
+  --font-m:   'DM Mono', monospace;
+  --font-b:   'DM Sans', sans-serif;
+}
+
+/* ── RESET ───────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--font-b);font-size:15px;line-height:1.5;
+  min-height:100vh;
+}
+
+/* grain overlay */
+body::after{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  opacity:.5;
+}
+
+/* ── LAYOUT ──────────────────────────────────────────────────────── */
+#app{position:relative;z-index:1;max-width:700px;margin:0 auto;padding-bottom:100px}
+
+/* ── HEADER ──────────────────────────────────────────────────────── */
+header{
+  padding:30px 20px 0;
+  display:flex;align-items:flex-end;justify-content:space-between;
+}
+.wordmark{
+  font-family:var(--font-d);font-size:56px;letter-spacing:3px;line-height:1;
+}
+.wordmark em{color:var(--lime);font-style:normal}
+.pool-chip{
+  font-family:var(--font-m);font-size:10px;letter-spacing:3px;
+  background:var(--lime);color:#0a0c0f;
+  padding:5px 12px;border-radius:4px;margin-bottom:10px;
+}
+#status-bar{
+  margin:10px 20px 0;
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--font-m);font-size:11px;color:var(--muted);
+}
+.dot{
+  width:7px;height:7px;border-radius:50%;background:var(--lime);
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
+
+/* progress bar: X/15 submitted today */
+#progress-wrap{
+  margin:14px 20px 0;
+  background:var(--surf2);border-radius:40px;overflow:hidden;height:4px;
+}
+#progress-fill{
+  height:100%;background:linear-gradient(90deg,var(--lime),var(--mint));
+  border-radius:40px;transition:width .5s cubic-bezier(.4,0,.2,1);
+}
+#progress-label{
+  margin:6px 20px 0;
+  font-family:var(--font-m);font-size:10px;color:var(--muted);letter-spacing:1px;
+}
+
+/* ── NAV ─────────────────────────────────────────────────────────── */
+nav{
+  position:sticky;top:0;z-index:20;
+  background:var(--bg);border-bottom:1px solid var(--border);
+  margin:18px 0 0;display:flex;padding:0 20px;gap:0;
+  overflow-x:auto;scrollbar-width:none;
+}
+nav::-webkit-scrollbar{display:none}
+nav button{
+  font-family:var(--font-m);font-size:10px;letter-spacing:2.5px;
+  text-transform:uppercase;font-weight:500;
+  background:none;border:none;cursor:pointer;
+  color:var(--muted);padding:14px 14px;
+  border-bottom:2px solid transparent;
+  transition:color .15s,border-color .15s;white-space:nowrap;
+}
+nav button:hover{color:var(--text)}
+nav button.active{color:var(--lime);border-bottom-color:var(--lime)}
+nav button.admin-btn{color:var(--muted)}
+nav button.admin-btn.active{color:var(--coral);border-bottom-color:var(--coral)}
+
+/* ── SECTIONS ────────────────────────────────────────────────────── */
+.section{display:none;padding:24px 20px}
+.section.active{display:block;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.sec-title{font-family:var(--font-d);font-size:34px;letter-spacing:1px;margin-bottom:2px}
+.sec-sub{
+  font-family:var(--font-m);font-size:10px;letter-spacing:2px;
+  color:var(--muted);margin-bottom:20px;
+}
+
+/* ── CARDS ───────────────────────────────────────────────────────── */
+.card{
+  background:var(--surf);border:1px solid var(--border);
+  border-radius:var(--r);padding:22px;
+}
+.card+.card{margin-top:14px}
+
+/* ── FORM ELEMENTS ───────────────────────────────────────────────── */
+label.field-label{
+  display:block;font-family:var(--font-m);font-size:10px;
+  letter-spacing:2px;text-transform:uppercase;color:var(--muted);
+  margin-bottom:8px;
+}
+select,input[type="text"],input[type="password"],input[type="date"]{
+  width:100%;background:var(--surf2);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--text);font-family:var(--font-b);
+  font-size:15px;padding:11px 14px;outline:none;appearance:none;
+  transition:border-color .2s;
+}
+select:focus,input:focus{border-color:var(--lime)}
+select option{background:var(--surf2)}
+
+textarea{
+  width:100%;background:var(--surf2);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--text);font-family:var(--font-m);
+  font-size:13px;padding:14px;outline:none;resize:vertical;min-height:110px;
+  line-height:1.7;transition:border-color .2s;
+}
+textarea:focus{border-color:var(--lime)}
+textarea::placeholder{color:var(--muted)}
+
+.form-group{margin-bottom:16px}
+
+/* ── BUTTONS ─────────────────────────────────────────────────────── */
+.btn{
+  border:none;border-radius:var(--r);cursor:pointer;
+  font-family:var(--font-d);font-size:20px;letter-spacing:2px;
+  padding:14px 24px;transition:transform .15s,opacity .15s;
+}
+.btn:hover{opacity:.9;transform:translateY(-1px)}
+.btn:active{transform:none}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.btn-primary{background:var(--lime);color:#0a0c0f;width:100%}
+.btn-danger{background:var(--coral);color:#fff;width:100%}
+.btn-ghost{
+  background:none;border:1px solid var(--border2);color:var(--subtle);
+  font-family:var(--font-m);font-size:11px;letter-spacing:1px;
+  padding:8px 16px;border-radius:6px;
+}
+
+/* ── PARSE PREVIEW ───────────────────────────────────────────────── */
+#parse-preview{
+  background:var(--surf2);border:1px solid var(--border2);
+  border-radius:var(--r);padding:16px;margin-top:14px;display:none;
+}
+.preview-date{
+  font-family:var(--font-m);font-size:10px;letter-spacing:2px;
+  color:var(--muted);margin-bottom:10px;
+}
+.round-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.round-chip{
+  display:flex;flex-direction:column;align-items:center;
+  background:var(--surf3);border:1px solid var(--border2);
+  border-radius:8px;padding:8px 14px;min-width:58px;
+}
+.round-chip .r-score{font-family:var(--font-m);font-size:18px;font-weight:500}
+.round-chip .r-emoji{font-size:16px;margin-top:2px}
+.round-chip .r-label{font-family:var(--font-m);font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:2px}
+.final-line{
+  font-family:var(--font-m);font-size:12px;color:var(--subtle);
+  border-top:1px solid var(--border);padding-top:10px;margin-top:2px;
+}
+.final-line strong{color:var(--lime);font-size:15px}
+.parse-error{
+  font-family:var(--font-m);font-size:11px;color:var(--coral);
+  margin-top:10px;letter-spacing:.5px;display:none;
+}
+.already-notice{
+  background:rgba(198,241,53,.06);border:1px solid rgba(198,241,53,.2);
+  border-radius:var(--r);padding:12px 16px;
+  font-family:var(--font-m);font-size:11px;color:var(--lime);
+  letter-spacing:.5px;margin-bottom:14px;display:none;
+}
+
+/* ── DAILY LEADERBOARD ───────────────────────────────────────────── */
+.lb-table{width:100%;border-collapse:collapse}
+.lb-table th{
+  font-family:var(--font-m);font-size:9px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--muted);font-weight:500;
+  padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);
+}
+.lb-table th.r{text-align:right}
+.lb-table td{
+  padding:11px 10px;border-bottom:1px solid var(--border);
+  font-size:13px;vertical-align:middle;
+}
+.lb-table tbody tr:last-child td{border-bottom:none}
+.lb-table tbody tr:hover{background:rgba(255,255,255,.02)}
+
+.rank-no{font-family:var(--font-m);color:var(--muted);font-size:12px;width:28px}
+.rank-1{color:var(--gold)}
+.rank-2{color:var(--subtle)}
+.rank-3{color:#c87a3a}
+
+.pname{font-weight:600}
+.ttag{
+  display:inline-block;font-family:var(--font-m);font-size:9px;
+  letter-spacing:1px;padding:2px 7px;border-radius:3px;margin-left:7px;
+  vertical-align:middle;
+}
+.tA{background:rgba(198,241,53,.12);color:var(--lime)}
+.tB{background:rgba(53,241,176,.12);color:var(--mint)}
+.tC{background:rgba(241,196,53,.12);color:var(--gold)}
+
+/* round score mini cells */
+.rounds-row td{padding:0 10px 10px}
+.round-minis{display:flex;gap:5px;flex-wrap:wrap}
+.r-mini{
+  display:flex;align-items:center;gap:4px;
+  background:var(--surf2);border:1px solid var(--border);
+  border-radius:5px;padding:3px 8px;
+  font-family:var(--font-m);font-size:11px;
+}
+.r-mini .em{font-size:11px}
+
+.score-val{font-family:var(--font-m);font-size:14px;font-weight:500}
+.r{text-align:right}
+
+/* city reveal strip */
+#city-reveal{margin-bottom:18px}
+.city-strip{
+  display:flex;flex-wrap:wrap;gap:8px;
+  padding:14px 16px;
+  background:var(--surf);border:1px solid var(--border);border-radius:var(--r);
+}
+.city-chip{
+  background:var(--surf3);border:1px solid var(--border2);
+  border-radius:6px;padding:5px 12px;
+  font-family:var(--font-m);font-size:11px;letter-spacing:.5px;
+  color:var(--text);display:flex;align-items:center;gap:6px;
+}
+.city-chip::before{content:'📍';font-size:10px}
+.city-lock{
+  padding:14px 16px;
+  background:var(--surf);border:1px solid var(--border);border-radius:var(--r);
+  font-family:var(--font-m);font-size:11px;color:var(--muted);letter-spacing:1px;
+  display:flex;align-items:center;gap:10px;
+}
+.lock-icon{font-size:16px}
+
+/* ── WEEKLY ──────────────────────────────────────────────────────── */
+.w-player{margin-bottom:20px}
+.w-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.w-name{font-weight:600;font-size:14px}
+.w-total{font-family:var(--font-m);font-size:13px;color:var(--lime)}
+.bar-track{height:7px;background:var(--surf2);border-radius:4px;overflow:hidden}
+.bar-fill{
+  height:100%;border-radius:4px;
+  background:linear-gradient(90deg,var(--lime),var(--mint));
+  transition:width .7s cubic-bezier(.4,0,.2,1);
+}
+.w-days{display:flex;gap:3px;margin-top:5px}
+.w-day{flex:1;text-align:center}
+.wd-label{font-family:var(--font-m);font-size:9px;color:var(--muted)}
+.wd-score{font-family:var(--font-m);font-size:11px;color:var(--text)}
+.wd-score.none{color:var(--border2)}
+
+/* ── TEAM CARDS ──────────────────────────────────────────────────── */
+.team-card{
+  background:var(--surf);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;margin-bottom:14px;
+}
+.tc-head{
+  padding:14px 18px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);
+}
+.tc-name{font-family:var(--font-d);font-size:24px;letter-spacing:1px}
+.tc-total{font-family:var(--font-m);font-size:18px;font-weight:500}
+.tc-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 18px;border-bottom:1px solid var(--border);font-size:13px;
+}
+.tc-row:last-child{border-bottom:none}
+.tc-score{font-family:var(--font-m);font-weight:500}
+.tc-today{font-family:var(--font-m);font-size:11px;color:var(--muted)}
+
+/* ── HISTORY ─────────────────────────────────────────────────────── */
+#hist-date-input{margin-bottom:18px}
+.hist-empty{
+  text-align:center;padding:40px 20px;
+  font-family:var(--font-m);font-size:11px;color:var(--muted);letter-spacing:1px;
+}
+
+/* ── ADMIN ───────────────────────────────────────────────────────── */
+#admin-lock{text-align:center;padding:40px 20px}
+#admin-lock p{
+  font-family:var(--font-m);font-size:11px;color:var(--muted);
+  letter-spacing:1px;margin-bottom:20px;
+}
+.lock-form{max-width:280px;margin:0 auto}
+.city-inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.city-inputs .form-group:nth-child(5){grid-column:1/-1}
+.admin-section{margin-bottom:28px}
+.admin-section-title{
+  font-family:var(--font-m);font-size:10px;letter-spacing:2px;
+  color:var(--muted);text-transform:uppercase;margin-bottom:12px;
+  padding-bottom:8px;border-bottom:1px solid var(--border);
+}
+
+/* ── TOAST ───────────────────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:28px;left:50%;
+  transform:translateX(-50%) translateY(100px);
+  background:var(--surf2);border:1px solid var(--lime);
+  color:var(--lime);font-family:var(--font-m);font-size:11px;
+  letter-spacing:1px;padding:11px 24px;border-radius:40px;
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+  z-index:200;white-space:nowrap;pointer-events:none;
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.err{border-color:var(--coral);color:var(--coral)}
+
+/* ── EMPTY ───────────────────────────────────────────────────────── */
+.empty{
+  text-align:center;padding:48px 20px;
+  font-family:var(--font-m);font-size:11px;color:var(--muted);letter-spacing:1px;
+}
+.empty-icon{font-size:32px;margin-bottom:10px}
+
+/* date pill */
+.date-pill{
+  display:inline-block;
+  background:var(--surf2);border:1px solid var(--border);
+  border-radius:40px;padding:4px 14px;
+  font-family:var(--font-m);font-size:10px;color:var(--muted);
+  letter-spacing:1px;margin-bottom:18px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="wordmark">Map<em>Tap</em></div>
+    <div class="pool-chip">Pool</div>
+  </header>
+
+  <div id="status-bar">
+    <div class="dot"></div>
+    <span id="status-txt">Connecting…</span>
+  </div>
+  <div id="progress-wrap"><div id="progress-fill" style="width:0%"></div></div>
+  <div id="progress-label">— / 15 submitted today</div>
+
+  <nav>
+    <button class="active" onclick="showTab('submit')">Submit</button>
+    <button onclick="showTab('daily')">Daily</button>
+    <button onclick="showTab('weekly')">Weekly</button>
+    <button onclick="showTab('teams')">Teams</button>
+    <button onclick="showTab('history')">History</button>
+    <button class="admin-btn" onclick="showTab('admin')">Admin</button>
+  </nav>
+
+  <!-- ═══════════════ SUBMIT ═══════════════ -->
+  <div id="tab-submit" class="section active">
+    <div class="sec-title">Submit Score</div>
+    <div class="sec-sub" id="submit-sub">TODAY'S MAPTAP</div>
+
+    <div id="already-notice" class="already-notice">
+      ✓ Score already submitted today — paste again to update it
+    </div>
+
+    <div class="card">
+      <div class="form-group">
+        <label class="field-label">Your Name</label>
+        <select id="player-sel">
+          <option value="">— select player —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="field-label">Paste your MapTap share text</label>
+        <textarea id="paste-box"
+          placeholder="www.maptap.gg May 26&#10;99🎯 95🏆 96🔥 95🏅 97🔥&#10;Final score: 962"></textarea>
+        <div id="parse-error" class="parse-error">
+          ⚠ Couldn't parse that — make sure you paste the full share text from MapTap
+        </div>
+      </div>
+
+      <div id="parse-preview">
+        <div class="preview-date" id="prev-date"></div>
+        <div class="round-chips" id="prev-rounds"></div>
+        <div class="final-line" id="prev-final"></div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-submit" onclick="submitScore()" style="margin-top:16px">
+        Submit Score
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ DAILY ═══════════════ -->
+  <div id="tab-daily" class="section">
+    <div class="sec-title">Daily Board</div>
+    <div class="sec-sub">TODAY'S RANKINGS</div>
+    <div class="date-pill" id="daily-date-pill"></div>
+    <div id="city-reveal"></div>
+    <div id="daily-content"></div>
+  </div>
+
+  <!-- ═══════════════ WEEKLY ═══════════════ -->
+  <div id="tab-weekly" class="section">
+    <div class="sec-title">Weekly</div>
+    <div class="sec-sub">LAST 7 DAYS · TOTAL SCORE</div>
+    <div id="weekly-content"></div>
+  </div>
+
+  <!-- ═══════════════ TEAMS ═══════════════ -->
+  <div id="tab-teams" class="section">
+    <div class="sec-title">Teams</div>
+    <div class="sec-sub">GROUP STANDINGS</div>
+    <div id="teams-content"></div>
+  </div>
+
+  <!-- ═══════════════ HISTORY ═══════════════ -->
+  <div id="tab-history" class="section">
+    <div class="sec-title">History</div>
+    <div class="sec-sub">BROWSE PAST DATES</div>
+    <div class="form-group" id="hist-date-input">
+      <label class="field-label">Select Date</label>
+      <input type="date" id="hist-date" onchange="renderHistory()">
+    </div>
+    <div id="history-content"></div>
+  </div>
+
+  <!-- ═══════════════ ADMIN ═══════════════ -->
+  <div id="tab-admin" class="section">
+    <div class="sec-title" style="color:var(--coral)">Admin</div>
+    <div class="sec-sub">POOL MANAGEMENT</div>
+
+    <!-- lock screen -->
+    <div id="admin-lock">
+      <p>ENTER ADMIN PASSWORD</p>
+      <div class="lock-form">
+        <div class="form-group">
+          <input type="password" id="admin-pw-input" placeholder="password"
+            onkeydown="if(event.key==='Enter')checkAdminPw()">
+        </div>
+        <button class="btn btn-danger" onclick="checkAdminPw()">Unlock</button>
+      </div>
+    </div>
+
+    <!-- admin panel (hidden until unlocked) -->
+    <div id="admin-panel" style="display:none">
+
+      <div class="admin-section">
+        <div class="admin-section-title">Today's City Names</div>
+        <div class="card">
+          <div class="city-inputs" id="city-inputs-wrap">
+            <!-- built by JS -->
+          </div>
+          <div class="form-group" style="margin-top:4px;margin-bottom:0">
+            <label class="field-label">Date (defaults to today)</label>
+            <input type="date" id="admin-city-date">
+          </div>
+          <button class="btn btn-primary" onclick="saveCities()" style="margin-top:16px">
+            Save Cities
+          </button>
+        </div>
+      </div>
+
+      <div class="admin-section">
+        <div class="admin-section-title">Remove a Score</div>
+        <div class="card">
+          <div class="form-group">
+            <label class="field-label">Player</label>
+            <select id="admin-del-player"></select>
+          </div>
+          <div class="form-group">
+            <label class="field-label">Date</label>
+            <input type="date" id="admin-del-date">
+          </div>
+          <button class="btn btn-danger" onclick="adminDeleteScore()">Remove Score</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// FIREBASE CONFIG
+// Replace with your project's config from:
+// Firebase Console → Project Settings → Your apps → Web app
+// ═══════════════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyDOHRtZoi3qUe-ovNc5DAJrKRKSXx0IFzA",
+  authDomain: "maptapapp-8a48d.firebaseapp.com",
+  projectId: "maptapapp-8a48d",
+  storageBucket: "maptapapp-8a48d.firebasestorage.app",
+  messagingSenderId: "527940340590",
+  appId: "1:527940340590:web:99b152ad2a18242fae0f7f"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ═══════════════════════════════════════════════════════════════════
+// POOL CONFIG  ← edit these
+// ═══════════════════════════════════════════════════════════════════
+const TEAMS = {
+  A: { name:"Team OG", cls:"tA", members:["Ryan","Danny","Helker","Vereb","Stas"] },
+  B: { name:"Team BAD",  cls:"tB", members:["Ryan/Steve","Rainier","Dan","Franco","Bert"] },
+  C: { name:"Team RagTag", cls:"tC", members:["Sean","Schav","Bry","Brian","Dylan"] },
+};
+const TOTAL_PLAYERS = 15;
+
+// Admin password — change this!
+const ADMIN_PASSWORD = "dannysthicc";
+
+// ═══════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════
+const PLAYERS = Object.entries(TEAMS).flatMap(([k,t]) =>
+  t.members.map(name => ({ name, team:k }))
+);
+
+let allScores  = [];   // { player, date, rounds[], finalScore, rawText, ts }
+let allCities  = {};   // { "YYYY-MM-DD": ["City1",…,"City5"] }
+let adminUnlocked = false;
+let parsedData = null; // result of last successful paste parse
+
+// ═══════════════════════════════════════════════════════════════════
+// DATE HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function pad(n){ return String(n).padStart(2,'0'); }
+function last7(){
+  const days=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    days.push(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`);
+  }
+  return days;
+}
+function fmtDate(ds){
+  if(!ds) return '';
+  const [y,m,d]=ds.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+function teamOf(name){ return PLAYERS.find(p=>p.name===name)?.team ?? null; }
+
+// ═══════════════════════════════════════════════════════════════════
+// SHARE TEXT PARSER
+// ═══════════════════════════════════════════════════════════════════
+// Expected format:
+//   www.maptap.gg May 26
+//   99🎯 95🏆 96🔥 95🏅 97🔥
+//   Final score: 962
+function parseShareText(raw) {
+  if(!raw || !raw.trim()) return null;
+  const lines = raw.trim().split('\n').map(l => l.trim()).filter(Boolean);
+  if(lines.length < 3) return null;
+
+  // Line 1: date  "www.maptap.gg May 26"
+  const dateLine = lines[0];
+  const dateMatch = dateLine.match(/(\w+)\s+(\d+)\s*$/);
+  if(!dateMatch) return null;
+  const monthStr = dateMatch[1];
+  const dayNum   = parseInt(dateMatch[2]);
+  const months   = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,
+                    Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  const mIdx = months[monthStr];
+  if(mIdx === undefined || isNaN(dayNum)) return null;
+  const year = new Date().getFullYear();
+  const dateStr = `${year}-${pad(mIdx+1)}-${pad(dayNum)}`;
+
+  // Line 2: round scores with emojis  "99🎯 95🏆 96🔥 95🏅 97🔥"
+  const roundLine = lines[1];
+  // Match sequences of digits followed by one or more emoji characters
+  const roundMatches = [...roundLine.matchAll(/(\d+)([\p{Emoji}]+)/gu)];
+  if(roundMatches.length !== 5) return null;
+  const rounds = roundMatches.map(m => ({
+    score: parseInt(m[1]),
+    emoji: m[2]
+  }));
+
+  // Line 3: final score  "Final score: 962"
+  const finalLine = lines[2];
+  const finalMatch = finalLine.match(/(\d+)\s*$/);
+  if(!finalMatch) return null;
+  const finalScore = parseInt(finalMatch[1]);
+
+  // Validate: sum of rounds should equal final (within rounding)
+  const roundSum = rounds.reduce((a,r)=>a+r.score,0);
+  if(Math.abs(roundSum - finalScore) > 5) return null; // lenient check
+
+  return { dateStr, rounds, finalScore };
+}
+
+// Live parse as user types/pastes
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('paste-box').addEventListener('input', onPasteInput);
+  document.getElementById('player-sel').addEventListener('change', checkAlreadySubmitted);
+});
+
+function onPasteInput() {
+  const raw = document.getElementById('paste-box').value;
+  const result = parseShareText(raw);
+  const preview = document.getElementById('parse-preview');
+  const errEl   = document.getElementById('parse-error');
+
+  if(!raw.trim()) {
+    preview.style.display = 'none';
+    errEl.style.display   = 'none';
+    parsedData = null;
+    return;
+  }
+
+  if(!result) {
+    preview.style.display = 'none';
+    errEl.style.display   = 'block';
+    parsedData = null;
+    return;
+  }
+
+  parsedData = result;
+  errEl.style.display = 'none';
+
+  // populate preview
+  document.getElementById('prev-date').textContent = fmtDate(result.dateStr).toUpperCase();
+  document.getElementById('prev-rounds').innerHTML = result.rounds.map((r,i) =>
+    `<div class="round-chip">
+       <div class="r-score">${r.score}</div>
+       <div class="r-emoji">${r.emoji}</div>
+       <div class="r-label">RD ${i+1}</div>
+     </div>`
+  ).join('');
+  document.getElementById('prev-final').innerHTML =
+    `Final score: <strong>${result.finalScore}</strong>`;
+  preview.style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SUBMIT
+// ═══════════════════════════════════════════════════════════════════
+async function submitScore() {
+  const player = document.getElementById('player-sel').value;
+  if(!player)     { showToast('Select your name first', true); return; }
+  if(!parsedData) { showToast('Paste a valid MapTap share text', true); return; }
+
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    await db.collection('scores').add({
+      player,
+      date:       parsedData.dateStr,
+      rounds:     parsedData.rounds,       // [{score, emoji}, …]
+      finalScore: parsedData.finalScore,
+      ts: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    showToast(`✓ ${player} — ${parsedData.finalScore} pts saved`);
+    document.getElementById('paste-box').value = '';
+    document.getElementById('parse-preview').style.display = 'none';
+    parsedData = null;
+    checkAlreadySubmitted();
+  } catch(e) {
+    showToast('Error saving — check Firebase', true);
+    console.error(e);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Submit Score';
+  }
+}
+
+function checkAlreadySubmitted() {
+  const player  = document.getElementById('player-sel').value;
+  const notice  = document.getElementById('already-notice');
+  if(!player) { notice.style.display='none'; return; }
+  const existing = allScores.find(s => s.player===player && s.date===today());
+  notice.style.display = existing ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FIREBASE LISTENERS
+// ═══════════════════════════════════════════════════════════════════
+function startListeners() {
+  const cutoff = last7()[0];
+
+  // Scores listener
+  db.collection('scores')
+    .where('date','>=',cutoff)
+    .orderBy('date','desc')
+    .orderBy('ts','desc')
+    .onSnapshot(snap => {
+      // Deduplicate: keep latest submission per player per day
+      const seen = {}, rows = [];
+      snap.forEach(doc => {
+        const d = doc.data(); d._id = doc.id;
+        const key = `${d.player}::${d.date}`;
+        if(!seen[key]) { seen[key]=true; rows.push(d); }
+      });
+      allScores = rows;
+      setStatus(`Updated ${new Date().toLocaleTimeString()}`);
+      updateProgress();
+      const tab = activeTab();
+      if(tab==='daily')   renderDaily();
+      if(tab==='weekly')  renderWeekly();
+      if(tab==='teams')   renderTeams();
+      if(tab==='submit')  checkAlreadySubmitted();
+      if(tab==='history') renderHistory();
+    }, err => { setStatus('Connection error'); console.error(err); });
+
+  // Cities listener
+  db.collection('cities')
+    .where('date','>=',cutoff)
+    .onSnapshot(snap => {
+      allCities = {};
+      snap.forEach(doc => { allCities[doc.data().date] = doc.data().cities; });
+      const tab = activeTab();
+      if(tab==='daily')   renderDaily();
+      if(tab==='history') renderHistory();
+    });
+}
+
+function setStatus(msg){ document.getElementById('status-txt').textContent = msg; }
+function activeTab(){
+  return document.querySelector('.section.active')?.id?.replace('tab-','') ?? '';
+}
+
+function updateProgress() {
+  const t = today();
+  const count = allScores.filter(s=>s.date===t).length;
+  const pct   = (count / TOTAL_PLAYERS * 100).toFixed(1);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent =
+    `${count} / ${TOTAL_PLAYERS} submitted today`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════════
+function showTab(name) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.querySelector(`nav button[onclick="showTab('${name}')"]`).classList.add('active');
+  if(name==='daily')   renderDaily();
+  if(name==='weekly')  renderWeekly();
+  if(name==='teams')   renderTeams();
+  if(name==='history') renderHistory();
+  if(name==='submit')  checkAlreadySubmitted();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function rankCell(i){
+  if(i===0) return `<td class="rank-no rank-1">1</td>`;
+  if(i===1) return `<td class="rank-no rank-2">2</td>`;
+  if(i===2) return `<td class="rank-no rank-3">3</td>`;
+  return `<td class="rank-no">${i+1}</td>`;
+}
+
+function teamTag(name){
+  const k = teamOf(name);
+  if(!k) return '';
+  return `<span class="ttag ${TEAMS[k].cls}">${k}</span>`;
+}
+
+function roundMinis(rounds){
+  if(!rounds||!rounds.length) return '<span style="color:var(--muted);font-size:11px;font-family:var(--font-m)">no round data</span>';
+  return rounds.map(r =>
+    `<div class="r-mini"><span>${r.score}</span><span class="em">${r.emoji}</span></div>`
+  ).join('');
+}
+
+function cityStripHTML(dateStr) {
+  const todaySubs = allScores.filter(s=>s.date===dateStr).length;
+  const cities    = allCities[dateStr];
+  const allIn     = todaySubs >= TOTAL_PLAYERS;
+
+  if(!cities || !cities.length) {
+    return `<div class="city-lock">
+      <span class="lock-icon">🔒</span>
+      <span>Cities hidden until all ${TOTAL_PLAYERS} players submit (${todaySubs}/${TOTAL_PLAYERS})</span>
+    </div>`;
+  }
+  if(!allIn && dateStr===today()) {
+    return `<div class="city-lock">
+      <span class="lock-icon">🔒</span>
+      <span>Cities revealed when all ${TOTAL_PLAYERS} submit (${todaySubs}/${TOTAL_PLAYERS})</span>
+    </div>`;
+  }
+  // reveal
+  return `<div class="city-strip">${cities.map(c=>`<div class="city-chip">${c}</div>`).join('')}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER: DAILY
+// ═══════════════════════════════════════════════════════════════════
+function renderDaily() {
+  const t = today();
+  document.getElementById('daily-date-pill').textContent = fmtDate(t);
+  document.getElementById('city-reveal').innerHTML = cityStripHTML(t);
+
+  const scores = allScores.filter(s=>s.date===t)
+    .sort((a,b)=>b.finalScore-a.finalScore);
+
+  if(!scores.length){
+    document.getElementById('daily-content').innerHTML =
+      `<div class="empty"><div class="empty-icon">📍</div>No scores yet today</div>`;
+    return;
+  }
+
+  const rows = scores.map((s,i) => `
+    <tr>
+      ${rankCell(i)}
+      <td class="pname">${s.player}${teamTag(s.player)}</td>
+      <td class="r score-val">${s.finalScore}</td>
+    </tr>
+    <tr class="rounds-row">
+      <td></td>
+      <td colspan="2"><div class="round-minis">${roundMinis(s.rounds)}</div></td>
+    </tr>`).join('');
+
+  document.getElementById('daily-content').innerHTML = `
+    <table class="lb-table">
+      <thead><tr>
+        <th>#</th><th>Player</th><th class="r">Score</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER: WEEKLY
+// ═══════════════════════════════════════════════════════════════════
+function renderWeekly() {
+  const days = last7();
+  const playerData = PLAYERS.map(p => {
+    const dayScores = days.map(d => {
+      const e = allScores.find(s=>s.player===p.name && s.date===d);
+      return e ? e.finalScore : null;
+    });
+    return { ...p, dayScores, total: dayScores.reduce((a,v)=>a+(v??0),0) };
+  }).sort((a,b)=>b.total-a.total);
+
+  const maxTotal = Math.max(...playerData.map(p=>p.total), 1);
+
+  const html = playerData.map(p => {
+    const pct = (p.total/maxTotal*100).toFixed(1);
+    const dayHtml = days.map((d,i) => {
+      const v = p.dayScores[i];
+      const [,,day] = d.split('-');
+      return `<div class="w-day">
+        <div class="wd-label">${Number(day)}</div>
+        <div class="wd-score ${v===null?'none':''}">${v !== null ? v : '·'}</div>
+      </div>`;
+    }).join('');
+    return `<div class="w-player">
+      <div class="w-header">
+        <span class="w-name">${p.name} <span class="ttag ${TEAMS[p.team].cls}">${p.team}</span></span>
+        <span class="w-total">${p.total}</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <div class="w-days">${dayHtml}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('weekly-content').innerHTML = html ||
+    `<div class="empty"><div class="empty-icon">📅</div>No data this week</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER: TEAMS
+// ═══════════════════════════════════════════════════════════════════
+function renderTeams() {
+  const days = last7();
+  const t = today();
+
+  const teamTotals = Object.entries(TEAMS).map(([k,team]) => {
+    const memberRows = team.members.map(name => {
+      const total = allScores.filter(s=>s.player===name&&days.includes(s.date))
+        .reduce((a,s)=>a+s.finalScore,0);
+      const todayE = allScores.find(s=>s.player===name&&s.date===t);
+      return { name, total, today: todayE?.finalScore ?? null };
+    }).sort((a,b)=>b.total-a.total);
+
+    const teamTotal = memberRows.reduce((a,m)=>a+m.total,0);
+    return { k, team, memberRows, teamTotal };
+  }).sort((a,b)=>b.teamTotal-a.teamTotal);
+
+  const html = teamTotals.map(({ k,team,memberRows,teamTotal }) => {
+    const mHtml = memberRows.map(m => `
+      <div class="tc-row">
+        <span>${m.name}</span>
+        <div style="display:flex;align-items:center;gap:14px">
+          ${m.today!==null?`<span class="tc-today">+${m.today} today</span>`:''}
+          <span class="tc-score">${m.total}</span>
+        </div>
+      </div>`).join('');
+    return `<div class="team-card">
+      <div class="tc-head">
+        <span class="tc-name ${team.cls}">${team.name}</span>
+        <span class="tc-total">${teamTotal}</span>
+      </div>${mHtml}
+    </div>`;
+  }).join('');
+
+  document.getElementById('teams-content').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER: HISTORY
+// ═══════════════════════════════════════════════════════════════════
+function renderHistory() {
+  const dateInput = document.getElementById('hist-date');
+  const ds = dateInput.value;
+  if(!ds) {
+    document.getElementById('history-content').innerHTML =
+      `<div class="hist-empty">Select a date above to view past scores</div>`;
+    return;
+  }
+
+  const scores = allScores.filter(s=>s.date===ds)
+    .sort((a,b)=>b.finalScore-a.finalScore);
+
+  // city reveal: always show on history (game is already done)
+  let cityHtml = '';
+  const cities = allCities[ds];
+  if(cities && cities.length) {
+    cityHtml = `<div style="margin-bottom:16px">${cityStripForHistory(ds)}</div>`;
+  }
+
+  if(!scores.length) {
+    document.getElementById('history-content').innerHTML =
+      cityHtml + `<div class="hist-empty">No scores found for ${fmtDate(ds)}</div>`;
+    return;
+  }
+
+  const rows = scores.map((s,i) => `
+    <tr>
+      ${rankCell(i)}
+      <td class="pname">${s.player}${teamTag(s.player)}</td>
+      <td class="r score-val">${s.finalScore}</td>
+    </tr>
+    <tr class="rounds-row">
+      <td></td>
+      <td colspan="2"><div class="round-minis">${roundMinis(s.rounds)}</div></td>
+    </tr>`).join('');
+
+  document.getElementById('history-content').innerHTML = `
+    <div class="date-pill">${fmtDate(ds)}</div>
+    ${cityHtml}
+    <table class="lb-table">
+      <thead><tr><th>#</th><th>Player</th><th class="r">Score</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// History always shows cities (it's a past date, game is over)
+function cityStripForHistory(ds) {
+  const cities = allCities[ds];
+  if(!cities||!cities.length) return '';
+  return `<div class="city-strip">${cities.map(c=>`<div class="city-chip">${c}</div>`).join('')}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ADMIN
+// ═══════════════════════════════════════════════════════════════════
+function checkAdminPw() {
+  const pw = document.getElementById('admin-pw-input').value;
+  if(pw === ADMIN_PASSWORD) {
+    adminUnlocked = true;
+    document.getElementById('admin-lock').style.display  = 'none';
+    document.getElementById('admin-panel').style.display = 'block';
+    buildAdminPanel();
+  } else {
+    showToast('Incorrect password', true);
+  }
+}
+
+function buildAdminPanel() {
+  // City inputs
+  const wrap = document.getElementById('city-inputs-wrap');
+  wrap.innerHTML = [1,2,3,4,5].map(n => `
+    <div class="form-group">
+      <label class="field-label">City ${n}</label>
+      <input type="text" id="city-${n}" placeholder="e.g. Tokyo">
+    </div>`).join('');
+
+  document.getElementById('admin-city-date').value = today();
+
+  // Delete player select
+  const delSel = document.getElementById('admin-del-player');
+  delSel.innerHTML = '<option value="">— select —</option>' +
+    PLAYERS.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
+  document.getElementById('admin-del-date').value = today();
+}
+
+async function saveCities() {
+  const ds = document.getElementById('admin-city-date').value;
+  const cities = [1,2,3,4,5].map(n =>
+    document.getElementById(`city-${n}`).value.trim()
+  ).filter(Boolean);
+
+  if(!ds)          { showToast('Pick a date', true); return; }
+  if(cities.length !== 5) { showToast('Enter all 5 city names', true); return; }
+
+  try {
+    await db.collection('cities').doc(ds).set({ date: ds, cities });
+    showToast('✓ Cities saved for ' + fmtDate(ds));
+    [1,2,3,4,5].forEach(n => { document.getElementById(`city-${n}`).value=''; });
+  } catch(e) {
+    showToast('Error saving cities', true);
+    console.error(e);
+  }
+}
+
+async function adminDeleteScore() {
+  const player = document.getElementById('admin-del-player').value;
+  const ds     = document.getElementById('admin-del-date').value;
+  if(!player || !ds) { showToast('Select player and date', true); return; }
+
+  if(!confirm(`Remove ${player}'s score on ${fmtDate(ds)}?`)) return;
+
+  // Find the doc(s) in Firestore and delete
+  try {
+    const snap = await db.collection('scores')
+      .where('player','==',player)
+      .where('date','==',ds)
+      .get();
+    const batch = db.batch();
+    snap.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    showToast(`✓ Removed ${player}'s score on ${fmtDate(ds)}`);
+  } catch(e) {
+    showToast('Error deleting', true);
+    console.error(e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════════
+let _toastTimer;
+function showToast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'show' + (err?' err':'');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(()=>{ t.className=''; }, 2800);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BUILD PLAYER SELECT
+// ═══════════════════════════════════════════════════════════════════
+function buildPlayerSelect() {
+  const sel = document.getElementById('player-sel');
+  const groups = Object.entries(TEAMS).map(([k,team]) => {
+    const opts = team.members.map(name =>
+      `<option value="${name}">${name}</option>`).join('');
+    return `<optgroup label="${team.name}">${opts}</optgroup>`;
+  });
+  sel.innerHTML = '<option value="">— select player —</option>' + groups.join('');
+  sel.addEventListener('change', checkAlreadySubmitted);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+function init() {
+  const t = today();
+  document.getElementById('submit-sub').textContent = `TODAY · ${fmtDate(t).toUpperCase()}`;
+  document.getElementById('daily-date-pill').textContent = fmtDate(t);
+  // Default history date to yesterday
+  const yest = new Date(); yest.setDate(yest.getDate()-1);
+  document.getElementById('hist-date').value =
+    `${yest.getFullYear()}-${pad(yest.getMonth()+1)}-${pad(yest.getDate())}`;
+
+  buildPlayerSelect();
+  setStatus('Connecting to Firebase…');
+  startListeners();
+}
+
+init();
+</script>
+</body>
+</html>
