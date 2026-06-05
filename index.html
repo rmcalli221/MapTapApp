@@ -5,364 +5,218 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MapTap Pool</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-<!-- Firebase SDK (v9 compat — no bundler needed) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <style>
-/* ── TOKENS ──────────────────────────────────────────────────────── */
 :root {
-  --bg:       #0a0c0f;
-  --surf:     #12151a;
-  --surf2:    #1a1f27;
-  --surf3:    #222834;
-  --border:   #252c38;
-  --border2:  #2e3848;
-
-  --lime:     #c6f135;
-  --mint:     #35f1b0;
-  --gold:     #f1c435;
-  --coral:    #f16035;
-  --sky:      #35b8f1;
-
-  --text:     #dce5f0;
-  --muted:    #4e5e78;
-  --subtle:   #8a9bb8;
-
-  --r:        10px;
-  --font-d:   'Bebas Neue', sans-serif;
-  --font-m:   'DM Mono', monospace;
-  --font-b:   'DM Sans', sans-serif;
+  --bg:     #0a0c0f;
+  --surf:   #12151a;
+  --surf2:  #1a1f27;
+  --surf3:  #222834;
+  --border: #252c38;
+  --bord2:  #2e3848;
+  --lime:   #c6f135;
+  --mint:   #35f1b0;
+  --gold:   #f1c435;
+  --coral:  #f16035;
+  --sky:    #35b8f1;
+  --text:   #dce5f0;
+  --muted:  #4e5e78;
+  --subtle: #8a9bb8;
+  --r: 10px;
+  --fd: 'Bebas Neue', sans-serif;
+  --fm: 'DM Mono', monospace;
+  --fb: 'DM Sans', sans-serif;
 }
-
-/* ── RESET ───────────────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{
-  background:var(--bg);color:var(--text);
-  font-family:var(--font-b);font-size:15px;line-height:1.5;
-  min-height:100vh;
-}
-
-/* grain overlay */
-body::after{
-  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
-  opacity:.5;
-}
-
-/* ── LAYOUT ──────────────────────────────────────────────────────── */
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;line-height:1.5;min-height:100vh}
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");opacity:.5}
 #app{position:relative;z-index:1;max-width:700px;margin:0 auto;padding-bottom:100px}
 
-/* ── HEADER ──────────────────────────────────────────────────────── */
-header{
-  padding:30px 20px 0;
-  display:flex;align-items:flex-end;justify-content:space-between;
-}
-.wordmark{
-  font-family:var(--font-d);font-size:56px;letter-spacing:3px;line-height:1;
-}
+/* HEADER */
+header{padding:30px 20px 0;display:flex;align-items:flex-end;justify-content:space-between}
+.wordmark{font-family:var(--fd);font-size:56px;letter-spacing:3px;line-height:1}
 .wordmark em{color:var(--lime);font-style:normal}
-.pool-chip{
-  font-family:var(--font-m);font-size:10px;letter-spacing:3px;
-  background:var(--lime);color:#0a0c0f;
-  padding:5px 12px;border-radius:4px;margin-bottom:10px;
-}
-#status-bar{
-  margin:10px 20px 0;
-  display:flex;align-items:center;gap:8px;
-  font-family:var(--font-m);font-size:11px;color:var(--muted);
-}
-.dot{
-  width:7px;height:7px;border-radius:50%;background:var(--lime);
-  animation:pulse 2s ease-in-out infinite;
-}
+.pool-chip{font-family:var(--fm);font-size:10px;letter-spacing:3px;background:var(--lime);color:#0a0c0f;padding:5px 12px;border-radius:4px;margin-bottom:10px}
+#status-bar{margin:10px 20px 0;display:flex;align-items:center;gap:8px;font-family:var(--fm);font-size:11px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--lime);animation:pulse 2s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
+#progress-wrap{margin:14px 20px 0;background:var(--surf2);border-radius:40px;overflow:hidden;height:4px}
+#progress-fill{height:100%;background:linear-gradient(90deg,var(--lime),var(--mint));border-radius:40px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+#progress-label{margin:6px 20px 0;font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:1px}
 
-/* progress bar: X/15 submitted today */
-#progress-wrap{
-  margin:14px 20px 0;
-  background:var(--surf2);border-radius:40px;overflow:hidden;height:4px;
-}
-#progress-fill{
-  height:100%;background:linear-gradient(90deg,var(--lime),var(--mint));
-  border-radius:40px;transition:width .5s cubic-bezier(.4,0,.2,1);
-}
-#progress-label{
-  margin:6px 20px 0;
-  font-family:var(--font-m);font-size:10px;color:var(--muted);letter-spacing:1px;
-}
-
-/* ── NAV ─────────────────────────────────────────────────────────── */
-nav{
-  position:sticky;top:0;z-index:20;
-  background:var(--bg);border-bottom:1px solid var(--border);
-  margin:18px 0 0;display:flex;padding:0 20px;gap:0;
-  overflow-x:auto;scrollbar-width:none;
-}
+/* NAV */
+nav{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border);margin:18px 0 0;display:flex;padding:0 20px;gap:0;overflow-x:auto;scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
-nav button{
-  font-family:var(--font-m);font-size:10px;letter-spacing:2.5px;
-  text-transform:uppercase;font-weight:500;
-  background:none;border:none;cursor:pointer;
-  color:var(--muted);padding:14px 14px;
-  border-bottom:2px solid transparent;
-  transition:color .15s,border-color .15s;white-space:nowrap;
-}
+nav button{font-family:var(--fm);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;font-weight:500;background:none;border:none;cursor:pointer;color:var(--muted);padding:14px 14px;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;white-space:nowrap}
 nav button:hover{color:var(--text)}
 nav button.active{color:var(--lime);border-bottom-color:var(--lime)}
 nav button.admin-btn{color:var(--muted)}
 nav button.admin-btn.active{color:var(--coral);border-bottom-color:var(--coral)}
 
-/* ── SECTIONS ────────────────────────────────────────────────────── */
+/* SECTIONS */
 .section{display:none;padding:24px 20px}
 .section.active{display:block;animation:fadeUp .2s ease}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.sec-title{font-family:var(--fd);font-size:34px;letter-spacing:1px;margin-bottom:2px}
+.sec-sub{font-family:var(--fm);font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:20px}
 
-.sec-title{font-family:var(--font-d);font-size:34px;letter-spacing:1px;margin-bottom:2px}
-.sec-sub{
-  font-family:var(--font-m);font-size:10px;letter-spacing:2px;
-  color:var(--muted);margin-bottom:20px;
-}
-
-/* ── CARDS ───────────────────────────────────────────────────────── */
-.card{
-  background:var(--surf);border:1px solid var(--border);
-  border-radius:var(--r);padding:22px;
-}
+/* CARDS */
+.card{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);padding:22px}
 .card+.card{margin-top:14px}
 
-/* ── FORM ELEMENTS ───────────────────────────────────────────────── */
-label.field-label{
-  display:block;font-family:var(--font-m);font-size:10px;
-  letter-spacing:2px;text-transform:uppercase;color:var(--muted);
-  margin-bottom:8px;
-}
-select,input[type="text"],input[type="password"],input[type="date"]{
-  width:100%;background:var(--surf2);border:1px solid var(--border);
-  border-radius:var(--r);color:var(--text);font-family:var(--font-b);
-  font-size:15px;padding:11px 14px;outline:none;appearance:none;
-  transition:border-color .2s;
-}
+/* FORM */
+label.field-label{display:block;font-family:var(--fm);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+select,input[type="text"],input[type="password"],input[type="date"]{width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--fb);font-size:15px;padding:11px 14px;outline:none;appearance:none;transition:border-color .2s}
 select:focus,input:focus{border-color:var(--lime)}
 select option{background:var(--surf2)}
-
-textarea{
-  width:100%;background:var(--surf2);border:1px solid var(--border);
-  border-radius:var(--r);color:var(--text);font-family:var(--font-m);
-  font-size:13px;padding:14px;outline:none;resize:vertical;min-height:110px;
-  line-height:1.7;transition:border-color .2s;
-}
+textarea{width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--fm);font-size:13px;padding:14px;outline:none;resize:vertical;min-height:110px;line-height:1.7;transition:border-color .2s}
 textarea:focus{border-color:var(--lime)}
 textarea::placeholder{color:var(--muted)}
-
 .form-group{margin-bottom:16px}
 
-/* ── BUTTONS ─────────────────────────────────────────────────────── */
-.btn{
-  border:none;border-radius:var(--r);cursor:pointer;
-  font-family:var(--font-d);font-size:20px;letter-spacing:2px;
-  padding:14px 24px;transition:transform .15s,opacity .15s;
-}
+/* BUTTONS */
+.btn{border:none;border-radius:var(--r);cursor:pointer;font-family:var(--fd);font-size:20px;letter-spacing:2px;padding:14px 24px;transition:transform .15s,opacity .15s}
 .btn:hover{opacity:.9;transform:translateY(-1px)}
 .btn:active{transform:none}
 .btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
 .btn-primary{background:var(--lime);color:#0a0c0f;width:100%}
 .btn-danger{background:var(--coral);color:#fff;width:100%}
-.btn-ghost{
-  background:none;border:1px solid var(--border2);color:var(--subtle);
-  font-family:var(--font-m);font-size:11px;letter-spacing:1px;
-  padding:8px 16px;border-radius:6px;
-}
 
-/* ── PARSE PREVIEW ───────────────────────────────────────────────── */
-#parse-preview{
-  background:var(--surf2);border:1px solid var(--border2);
-  border-radius:var(--r);padding:16px;margin-top:14px;display:none;
-}
-.preview-date{
-  font-family:var(--font-m);font-size:10px;letter-spacing:2px;
-  color:var(--muted);margin-bottom:10px;
-}
+/* PARSE PREVIEW */
+#parse-preview{background:var(--surf2);border:1px solid var(--bord2);border-radius:var(--r);padding:16px;margin-top:14px;display:none}
+.preview-date{font-family:var(--fm);font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:10px}
 .round-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
-.round-chip{
-  display:flex;flex-direction:column;align-items:center;
-  background:var(--surf3);border:1px solid var(--border2);
-  border-radius:8px;padding:8px 14px;min-width:58px;
-}
-.round-chip .r-score{font-family:var(--font-m);font-size:18px;font-weight:500}
+.round-chip{display:flex;flex-direction:column;align-items:center;background:var(--surf3);border:1px solid var(--bord2);border-radius:8px;padding:8px 14px;min-width:58px}
+.round-chip .r-score{font-family:var(--fm);font-size:18px;font-weight:500}
 .round-chip .r-emoji{font-size:16px;margin-top:2px}
-.round-chip .r-label{font-family:var(--font-m);font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:2px}
-.final-line{
-  font-family:var(--font-m);font-size:12px;color:var(--subtle);
-  border-top:1px solid var(--border);padding-top:10px;margin-top:2px;
-}
+.round-chip .r-label{font-family:var(--fm);font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:2px}
+.final-line{font-family:var(--fm);font-size:12px;color:var(--subtle);border-top:1px solid var(--border);padding-top:10px;margin-top:2px}
 .final-line strong{color:var(--lime);font-size:15px}
-.parse-error{
-  font-family:var(--font-m);font-size:11px;color:var(--coral);
-  margin-top:10px;letter-spacing:.5px;display:none;
-}
-.already-notice{
-  background:rgba(198,241,53,.06);border:1px solid rgba(198,241,53,.2);
-  border-radius:var(--r);padding:12px 16px;
-  font-family:var(--font-m);font-size:11px;color:var(--lime);
-  letter-spacing:.5px;margin-bottom:14px;display:none;
-}
+.parse-error{font-family:var(--fm);font-size:11px;color:var(--coral);margin-top:10px;letter-spacing:.5px;display:none}
+.already-notice{background:rgba(198,241,53,.06);border:1px solid rgba(198,241,53,.2);border-radius:var(--r);padding:12px 16px;font-family:var(--fm);font-size:11px;color:var(--lime);letter-spacing:.5px;margin-bottom:14px;display:none}
 
-/* ── DAILY LEADERBOARD ───────────────────────────────────────────── */
+/* LEADERBOARD TABLE */
 .lb-table{width:100%;border-collapse:collapse}
-.lb-table th{
-  font-family:var(--font-m);font-size:9px;letter-spacing:2px;
-  text-transform:uppercase;color:var(--muted);font-weight:500;
-  padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);
-}
+.lb-table th{font-family:var(--fm);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:500;padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)}
 .lb-table th.r{text-align:right}
-.lb-table td{
-  padding:11px 10px;border-bottom:1px solid var(--border);
-  font-size:13px;vertical-align:middle;
-}
+.lb-table td{padding:11px 10px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
 .lb-table tbody tr:last-child td{border-bottom:none}
 .lb-table tbody tr:hover{background:rgba(255,255,255,.02)}
-
-.rank-no{font-family:var(--font-m);color:var(--muted);font-size:12px;width:28px}
-.rank-1{color:var(--gold)}
-.rank-2{color:var(--subtle)}
-.rank-3{color:#c87a3a}
-
+.rank-no{font-family:var(--fm);color:var(--muted);font-size:12px;width:28px}
+.rank-1{color:var(--gold)}.rank-2{color:var(--subtle)}.rank-3{color:#c87a3a}
 .pname{font-weight:600}
-.ttag{
-  display:inline-block;font-family:var(--font-m);font-size:9px;
-  letter-spacing:1px;padding:2px 7px;border-radius:3px;margin-left:7px;
-  vertical-align:middle;
-}
+.ttag{display:inline-block;font-family:var(--fm);font-size:9px;letter-spacing:1px;padding:2px 7px;border-radius:3px;margin-left:7px;vertical-align:middle}
 .tA{background:rgba(198,241,53,.12);color:var(--lime)}
 .tB{background:rgba(53,241,176,.12);color:var(--mint)}
 .tC{background:rgba(241,196,53,.12);color:var(--gold)}
-
-/* round score mini cells */
 .rounds-row td{padding:0 10px 10px}
 .round-minis{display:flex;gap:5px;flex-wrap:wrap}
-.r-mini{
-  display:flex;align-items:center;gap:4px;
-  background:var(--surf2);border:1px solid var(--border);
-  border-radius:5px;padding:3px 8px;
-  font-family:var(--font-m);font-size:11px;
-}
+.r-mini{display:flex;align-items:center;gap:4px;background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-family:var(--fm);font-size:11px}
 .r-mini .em{font-size:11px}
-
-.score-val{font-family:var(--font-m);font-size:14px;font-weight:500}
+.score-val{font-family:var(--fm);font-size:14px;font-weight:500}
 .r{text-align:right}
 
-/* city reveal strip */
+/* CITY REVEAL */
 #city-reveal{margin-bottom:18px}
-.city-strip{
-  display:flex;flex-wrap:wrap;gap:8px;
-  padding:14px 16px;
-  background:var(--surf);border:1px solid var(--border);border-radius:var(--r);
-}
-.city-chip{
-  background:var(--surf3);border:1px solid var(--border2);
-  border-radius:6px;padding:5px 12px;
-  font-family:var(--font-m);font-size:11px;letter-spacing:.5px;
-  color:var(--text);display:flex;align-items:center;gap:6px;
-}
+.city-strip{display:flex;flex-wrap:wrap;gap:8px;padding:14px 16px;background:var(--surf);border:1px solid var(--border);border-radius:var(--r)}
+.city-chip{background:var(--surf3);border:1px solid var(--bord2);border-radius:6px;padding:5px 12px;font-family:var(--fm);font-size:11px;letter-spacing:.5px;color:var(--text);display:flex;align-items:center;gap:6px}
 .city-chip::before{content:'📍';font-size:10px}
-.city-lock{
-  padding:14px 16px;
-  background:var(--surf);border:1px solid var(--border);border-radius:var(--r);
-  font-family:var(--font-m);font-size:11px;color:var(--muted);letter-spacing:1px;
-  display:flex;align-items:center;gap:10px;
-}
+.city-lock{padding:14px 16px;background:var(--surf);border:1px solid var(--border);border-radius:var(--r);font-family:var(--fm);font-size:11px;color:var(--muted);letter-spacing:1px;display:flex;align-items:center;gap:10px}
 .lock-icon{font-size:16px}
 
-/* ── WEEKLY ──────────────────────────────────────────────────────── */
-.w-player{margin-bottom:20px}
-.w-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
-.w-name{font-weight:600;font-size:14px}
-.w-total{font-family:var(--font-m);font-size:13px;color:var(--lime)}
-.bar-track{height:7px;background:var(--surf2);border-radius:4px;overflow:hidden}
-.bar-fill{
-  height:100%;border-radius:4px;
-  background:linear-gradient(90deg,var(--lime),var(--mint));
-  transition:width .7s cubic-bezier(.4,0,.2,1);
-}
-.w-days{display:flex;gap:3px;margin-top:5px}
-.w-day{flex:1;text-align:center}
-.wd-label{font-family:var(--font-m);font-size:9px;color:var(--muted)}
-.wd-score{font-family:var(--font-m);font-size:11px;color:var(--text)}
-.wd-score.none{color:var(--border2)}
+/* ── SUB-NAV (tabs within Individual / Teams) ── */
+.sub-nav{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+.sub-btn{font-family:var(--fm);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;background:var(--surf2);border:1px solid var(--border);color:var(--muted);padding:7px 14px;border-radius:6px;cursor:pointer;transition:all .15s}
+.sub-btn:hover{color:var(--text);border-color:var(--bord2)}
+.sub-btn.active{background:var(--lime);color:#0a0c0f;border-color:var(--lime)}
 
-/* ── TEAM CARDS ──────────────────────────────────────────────────── */
-.team-card{
-  background:var(--surf);border:1px solid var(--border);
-  border-radius:var(--r);overflow:hidden;margin-bottom:14px;
-}
-.tc-head{
-  padding:14px 18px;display:flex;align-items:center;justify-content:space-between;
-  border-bottom:1px solid var(--border);
-}
-.tc-name{font-family:var(--font-d);font-size:24px;letter-spacing:1px}
-.tc-total{font-family:var(--font-m);font-size:18px;font-weight:500}
-.tc-row{
+/* ── WEEK SECTION HEADER ── */
+.week-header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:10px 18px;border-bottom:1px solid var(--border);font-size:13px;
+  margin:20px 0 10px;
 }
-.tc-row:last-child{border-bottom:none}
-.tc-score{font-family:var(--font-m);font-weight:500}
-.tc-today{font-family:var(--font-m);font-size:11px;color:var(--muted)}
+.week-label{font-family:var(--fd);font-size:22px;letter-spacing:1px}
+.week-range{font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:1px}
 
-/* ── HISTORY ─────────────────────────────────────────────────────── */
+/* ── INDIVIDUAL PLAYER ROW ── */
+.ind-player{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.ind-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none}
+.ind-head:hover{background:rgba(255,255,255,.02)}
+.ind-name{font-weight:600;font-size:14px}
+.ind-stats{display:flex;gap:16px;align-items:center}
+.ind-avg{font-family:var(--fm);font-size:13px;color:var(--lime)}
+.ind-sub-avg{font-family:var(--fm);font-size:11px;color:var(--muted)}
+.ind-body{display:none;border-top:1px solid var(--border)}
+.ind-body.open{display:block}
+.day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0}
+.day-cell{text-align:center;padding:8px 4px;border-right:1px solid var(--border)}
+.day-cell:last-child{border-right:none}
+.day-cell .dc-label{font-family:var(--fm);font-size:9px;color:var(--muted);letter-spacing:.5px}
+.day-cell .dc-score{font-family:var(--fm);font-size:13px;margin-top:2px}
+.day-cell .dc-score.missing{color:var(--muted)}
+.day-cell .dc-score.default{color:var(--coral)}
+
+/* ── TEAM CARD (new style) ── */
+.team-block{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;overflow:hidden}
+.team-block-head{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.tb-name{font-family:var(--fd);font-size:24px;letter-spacing:1px}
+.tb-badges{display:flex;gap:8px;align-items:center}
+.tb-avg{font-family:var(--fm);font-size:16px;font-weight:500}
+.tb-rank-badge{font-family:var(--fm);font-size:11px;padding:3px 10px;border-radius:4px;font-weight:500}
+.tbr-1{background:rgba(241,196,53,.18);color:var(--gold)}
+.tbr-2{background:rgba(138,155,184,.15);color:var(--subtle)}
+.tbr-3{background:rgba(200,122,58,.18);color:#c87a3a}
+.team-day-grid{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid var(--border)}
+.tdc{text-align:center;padding:8px 4px;border-right:1px solid var(--border)}
+.tdc:last-child{border-right:none}
+.tdc .tdc-label{font-family:var(--fm);font-size:9px;color:var(--muted);letter-spacing:.5px}
+.tdc .tdc-score{font-family:var(--fm);font-size:12px;margin-top:2px}
+
+/* ── TROPHY TALLY ── */
+.trophy-table{width:100%;border-collapse:collapse}
+.trophy-table th{font-family:var(--fm);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:7px 12px;text-align:left;border-bottom:1px solid var(--border)}
+.trophy-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px}
+.trophy-table tbody tr:last-child td{border-bottom:none}
+.trophy-icons{font-size:14px;letter-spacing:2px}
+
+/* ── PREVIOUS WEEKS ── */
+.prev-week-block{margin-bottom:18px}
+.prev-week-label{font-family:var(--fm);font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+
+/* ── ALL-TIME STATS ── */
+.alltime-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.alltime-row:last-child{border-bottom:none}
+.at-name{font-weight:600;font-size:14px}
+.at-avg{font-family:var(--fm);font-size:14px;color:var(--lime)}
+.at-sub{font-family:var(--fm);font-size:10px;color:var(--muted)}
+
+/* HISTORY */
 #hist-date-input{margin-bottom:18px}
-.hist-empty{
-  text-align:center;padding:40px 20px;
-  font-family:var(--font-m);font-size:11px;color:var(--muted);letter-spacing:1px;
-}
+.hist-empty{text-align:center;padding:40px 20px;font-family:var(--fm);font-size:11px;color:var(--muted);letter-spacing:1px}
 
-/* ── ADMIN ───────────────────────────────────────────────────────── */
+/* ADMIN */
 #admin-lock{text-align:center;padding:40px 20px}
-#admin-lock p{
-  font-family:var(--font-m);font-size:11px;color:var(--muted);
-  letter-spacing:1px;margin-bottom:20px;
-}
+#admin-lock p{font-family:var(--fm);font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:20px}
 .lock-form{max-width:280px;margin:0 auto}
 .city-inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .city-inputs .form-group:nth-child(5){grid-column:1/-1}
 .admin-section{margin-bottom:28px}
-.admin-section-title{
-  font-family:var(--font-m);font-size:10px;letter-spacing:2px;
-  color:var(--muted);text-transform:uppercase;margin-bottom:12px;
-  padding-bottom:8px;border-bottom:1px solid var(--border);
-}
+.admin-section-title{font-family:var(--fm);font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
 
-/* ── TOAST ───────────────────────────────────────────────────────── */
-#toast{
-  position:fixed;bottom:28px;left:50%;
-  transform:translateX(-50%) translateY(100px);
-  background:var(--surf2);border:1px solid var(--lime);
-  color:var(--lime);font-family:var(--font-m);font-size:11px;
-  letter-spacing:1px;padding:11px 24px;border-radius:40px;
-  transition:transform .35s cubic-bezier(.34,1.56,.64,1);
-  z-index:200;white-space:nowrap;pointer-events:none;
-}
+/* TOAST */
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--surf2);border:1px solid var(--lime);color:var(--lime);font-family:var(--fm);font-size:11px;letter-spacing:1px;padding:11px 24px;border-radius:40px;transition:transform .35s cubic-bezier(.34,1.56,.64,1);z-index:200;white-space:nowrap;pointer-events:none}
 #toast.show{transform:translateX(-50%) translateY(0)}
 #toast.err{border-color:var(--coral);color:var(--coral)}
 
-/* ── EMPTY ───────────────────────────────────────────────────────── */
-.empty{
-  text-align:center;padding:48px 20px;
-  font-family:var(--font-m);font-size:11px;color:var(--muted);letter-spacing:1px;
-}
+/* MISC */
+.empty{text-align:center;padding:48px 20px;font-family:var(--fm);font-size:11px;color:var(--muted);letter-spacing:1px}
 .empty-icon{font-size:32px;margin-bottom:10px}
-
-/* date pill */
-.date-pill{
-  display:inline-block;
-  background:var(--surf2);border:1px solid var(--border);
-  border-radius:40px;padding:4px 14px;
-  font-family:var(--font-m);font-size:10px;color:var(--muted);
-  letter-spacing:1px;margin-bottom:18px;
-}
+.date-pill{display:inline-block;background:var(--surf2);border:1px solid var(--border);border-radius:40px;padding:4px 14px;font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:18px}
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0}
 </style>
 </head>
 <body>
@@ -372,61 +226,44 @@ textarea::placeholder{color:var(--muted)}
     <div class="wordmark">Map<em>Tap</em></div>
     <div class="pool-chip">Pool</div>
   </header>
-
-  <div id="status-bar">
-    <div class="dot"></div>
-    <span id="status-txt">Connecting…</span>
-  </div>
+  <div id="status-bar"><div class="dot"></div><span id="status-txt">Connecting…</span></div>
   <div id="progress-wrap"><div id="progress-fill" style="width:0%"></div></div>
   <div id="progress-label">— / 15 submitted today</div>
 
   <nav>
     <button class="active" onclick="showTab('submit')">Submit</button>
     <button onclick="showTab('daily')">Daily</button>
-    <button onclick="showTab('weekly')">Weekly</button>
+    <button onclick="showTab('individual')">Individual</button>
     <button onclick="showTab('teams')">Teams</button>
     <button onclick="showTab('history')">History</button>
     <button class="admin-btn" onclick="showTab('admin')">Admin</button>
   </nav>
 
-  <!-- ═══════════════ SUBMIT ═══════════════ -->
+  <!-- SUBMIT -->
   <div id="tab-submit" class="section active">
     <div class="sec-title">Submit Score</div>
     <div class="sec-sub" id="submit-sub">TODAY'S MAPTAP</div>
-
-    <div id="already-notice" class="already-notice">
-      ✓ Score already submitted today — paste again to update it
-    </div>
-
+    <div id="already-notice" class="already-notice">✓ Score already submitted today — paste again to update it</div>
     <div class="card">
       <div class="form-group">
         <label class="field-label">Your Name</label>
-        <select id="player-sel">
-          <option value="">— select player —</option>
-        </select>
+        <select id="player-sel"><option value="">— select player —</option></select>
       </div>
       <div class="form-group">
         <label class="field-label">Paste your MapTap share text</label>
-        <textarea id="paste-box"
-          placeholder="www.maptap.gg May 26&#10;99🎯 95🏆 96🔥 95🏅 97🔥&#10;Final score: 962"></textarea>
-        <div id="parse-error" class="parse-error">
-          ⚠ Couldn't parse that — make sure you paste the full share text from MapTap
-        </div>
+        <textarea id="paste-box" placeholder="www.maptap.gg May 26&#10;99🎯 95🏆 96🔥 95🏅 97🔥&#10;Final score: 962"></textarea>
+        <div id="parse-error" class="parse-error">⚠ Couldn't parse that — make sure you paste the full share text from MapTap</div>
       </div>
-
       <div id="parse-preview">
         <div class="preview-date" id="prev-date"></div>
         <div class="round-chips" id="prev-rounds"></div>
         <div class="final-line" id="prev-final"></div>
       </div>
-
-      <button class="btn btn-primary" id="btn-submit" onclick="submitScore()" style="margin-top:16px">
-        Submit Score
-      </button>
+      <button class="btn btn-primary" id="btn-submit" onclick="submitScore()" style="margin-top:16px">Submit Score</button>
     </div>
   </div>
 
-  <!-- ═══════════════ DAILY ═══════════════ -->
+  <!-- DAILY -->
   <div id="tab-daily" class="section">
     <div class="sec-title">Daily Board</div>
     <div class="sec-sub">TODAY'S RANKINGS</div>
@@ -435,21 +272,37 @@ textarea::placeholder{color:var(--muted)}
     <div id="daily-content"></div>
   </div>
 
-  <!-- ═══════════════ WEEKLY ═══════════════ -->
-  <div id="tab-weekly" class="section">
-    <div class="sec-title">Weekly</div>
-    <div class="sec-sub">LAST 7 DAYS · TOTAL SCORE</div>
-    <div id="weekly-content"></div>
+  <!-- INDIVIDUAL -->
+  <div id="tab-individual" class="section">
+    <div class="sec-title">Individual</div>
+    <div class="sec-sub">PERSONAL STATS</div>
+    <div class="sub-nav">
+      <button class="sub-btn active" onclick="showIndSub('current')">This Week</button>
+      <button class="sub-btn" onclick="showIndSub('previous')">Previous Weeks</button>
+      <button class="sub-btn" onclick="showIndSub('alltime')">All Time</button>
+    </div>
+    <div id="ind-current"></div>
+    <div id="ind-previous" style="display:none"></div>
+    <div id="ind-alltime" style="display:none"></div>
   </div>
 
-  <!-- ═══════════════ TEAMS ═══════════════ -->
+  <!-- TEAMS -->
   <div id="tab-teams" class="section">
     <div class="sec-title">Teams</div>
-    <div class="sec-sub">GROUP STANDINGS</div>
-    <div id="teams-content"></div>
+    <div class="sec-sub">TEAM COMPETITION</div>
+    <div class="sub-nav">
+      <button class="sub-btn active" onclick="showTeamSub('current')">This Week</button>
+      <button class="sub-btn" onclick="showTeamSub('previous')">Previous Weeks</button>
+      <button class="sub-btn" onclick="showTeamSub('alltime')">All Time</button>
+      <button class="sub-btn" onclick="showTeamSub('trophy')">Trophy Case</button>
+    </div>
+    <div id="team-current"></div>
+    <div id="team-previous" style="display:none"></div>
+    <div id="team-alltime" style="display:none"></div>
+    <div id="team-trophy" style="display:none"></div>
   </div>
 
-  <!-- ═══════════════ HISTORY ═══════════════ -->
+  <!-- HISTORY -->
   <div id="tab-history" class="section">
     <div class="sec-title">History</div>
     <div class="sec-sub">BROWSE PAST DATES</div>
@@ -460,42 +313,31 @@ textarea::placeholder{color:var(--muted)}
     <div id="history-content"></div>
   </div>
 
-  <!-- ═══════════════ ADMIN ═══════════════ -->
+  <!-- ADMIN -->
   <div id="tab-admin" class="section">
     <div class="sec-title" style="color:var(--coral)">Admin</div>
     <div class="sec-sub">POOL MANAGEMENT</div>
-
-    <!-- lock screen -->
     <div id="admin-lock">
       <p>ENTER ADMIN PASSWORD</p>
       <div class="lock-form">
         <div class="form-group">
-          <input type="password" id="admin-pw-input" placeholder="password"
-            onkeydown="if(event.key==='Enter')checkAdminPw()">
+          <input type="password" id="admin-pw-input" placeholder="password" onkeydown="if(event.key==='Enter')checkAdminPw()">
         </div>
         <button class="btn btn-danger" onclick="checkAdminPw()">Unlock</button>
       </div>
     </div>
-
-    <!-- admin panel (hidden until unlocked) -->
     <div id="admin-panel" style="display:none">
-
       <div class="admin-section">
         <div class="admin-section-title">Today's City Names</div>
         <div class="card">
-          <div class="city-inputs" id="city-inputs-wrap">
-            <!-- built by JS -->
-          </div>
+          <div class="city-inputs" id="city-inputs-wrap"></div>
           <div class="form-group" style="margin-top:4px;margin-bottom:0">
             <label class="field-label">Date (defaults to today)</label>
             <input type="date" id="admin-city-date">
           </div>
-          <button class="btn btn-primary" onclick="saveCities()" style="margin-top:16px">
-            Save Cities
-          </button>
+          <button class="btn btn-primary" onclick="saveCities()" style="margin-top:16px">Save Cities</button>
         </div>
       </div>
-
       <div class="admin-section">
         <div class="admin-section-title">Remove a Score</div>
         <div class="card">
@@ -510,20 +352,16 @@ textarea::placeholder{color:var(--muted)}
           <button class="btn btn-danger" onclick="adminDeleteScore()">Remove Score</button>
         </div>
       </div>
-
     </div>
   </div>
 
-</div><!-- /app -->
-
+</div>
 <div id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════
-// FIREBASE CONFIG
-// Replace with your project's config from:
-// Firebase Console → Project Settings → Your apps → Web app
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════
+// FIREBASE CONFIG — replace with yours
+// ═══════════════════════════════════════
 const firebaseConfig = {
   apiKey: "AIzaSyDOHRtZoi3qUe-ovNc5DAJrKRKSXx0IFzA",
   authDomain: "maptapapp-8a48d.firebaseapp.com",
@@ -532,607 +370,767 @@ const firebaseConfig = {
   messagingSenderId: "527940340590",
   appId: "1:527940340590:web:99b152ad2a18242fae0f7f"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ═══════════════════════════════════════════════════════════════════
-// POOL CONFIG  ← edit these
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════
+// POOL CONFIG
+// ═══════════════════════════════════════
 const TEAMS = {
-  A: { name:"Team OG", cls:"tA", members:["Ryan","Danny","Helker","Vereb","Stas"] },
-  B: { name:"Team BAD",  cls:"tB", members:["Ryan/Steve","Rainier","Dan","Franco","Bert"] },
+  A: { name:"Team OG",     cls:"tA", members:["Ryan","Danny","Helker","Vereb","Stas"] },
+  B: { name:"Team BAD",    cls:"tB", members:["Ryan/Steve","Rainier","Dan","Franco","Bert"] },
   C: { name:"Team RagTag", cls:"tC", members:["Sean","Schav","Bry","Brian","Dylan"] },
 };
 const TOTAL_PLAYERS = 15;
-
-// Admin password — change this!
 const ADMIN_PASSWORD = "dannysthicc";
+const DEFAULT_SCORE  = 500;  // score assigned when a player didn't submit
 
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════
 // STATE
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════
 const PLAYERS = Object.entries(TEAMS).flatMap(([k,t]) =>
   t.members.map(name => ({ name, team:k }))
 );
+let allScores = [];
+let allCities = {};
+let parsedData = null;
 
-let allScores  = [];   // { player, date, rounds[], finalScore, rawText, ts }
-let allCities  = {};   // { "YYYY-MM-DD": ["City1",…,"City5"] }
-let adminUnlocked = false;
-let parsedData = null; // result of last successful paste parse
-
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════
 // DATE HELPERS
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════
 function today() {
   const d = new Date();
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 }
 function pad(n){ return String(n).padStart(2,'0'); }
-function last7(){
-  const days=[];
-  for(let i=6;i>=0;i--){
-    const d=new Date(); d.setDate(d.getDate()-i);
-    days.push(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`);
+
+function fmtDate(ds){
+  if(!ds) return '';
+  const [y,m,d] = ds.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+function fmtShort(ds){
+  if(!ds) return '';
+  const [y,m,d] = ds.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+// Returns "YYYY-MM-DD" for the Sunday that starts the week containing dateStr
+function weekStart(ds) {
+  const [y,m,d] = ds.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate() - dt.getDay()); // back to Sunday
+  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+}
+
+// Returns "YYYY-MM-DD" for Saturday of that week
+function weekEnd(startDs) {
+  const [y,m,d] = startDs.split('-').map(Number);
+  const dt = new Date(y,m-1,d);
+  dt.setDate(dt.getDate()+6);
+  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+}
+
+// All 7 dates (Sun–Sat) for a given week start
+function weekDays(startDs) {
+  const days = [];
+  const [y,m,d] = startDs.split('-').map(Number);
+  for(let i=0;i<7;i++){
+    const dt = new Date(y,m-1,d+i);
+    days.push(`${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`);
   }
   return days;
 }
-function fmtDate(ds){
-  if(!ds) return '';
-  const [y,m,d]=ds.split('-').map(Number);
-  return new Date(y,m-1,d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+// Returns sorted unique week-start strings that appear in allScores
+function allWeekStarts() {
+  const seen = new Set();
+  allScores.forEach(s => seen.add(weekStart(s.date)));
+  return [...seen].sort();
 }
+
 function teamOf(name){ return PLAYERS.find(p=>p.name===name)?.team ?? null; }
 
-// ═══════════════════════════════════════════════════════════════════
-// SHARE TEXT PARSER
-// ═══════════════════════════════════════════════════════════════════
-// Expected format:
-//   www.maptap.gg May 26
-//   99🎯 95🏆 96🔥 95🏅 97🔥
-//   Final score: 962
+// ═══════════════════════════════════════
+// SCORE HELPERS  (500 default)
+// ═══════════════════════════════════════
+
+// Get a player's submitted score for a date, or DEFAULT_SCORE if missing
+function scoreOn(playerName, dateStr) {
+  const e = allScores.find(s => s.player===playerName && s.date===dateStr);
+  return { score: e ? e.finalScore : DEFAULT_SCORE, submitted: !!e };
+}
+
+// Average score for a player over an array of dates (using 500 for missing)
+function playerAvgOverDates(playerName, dates) {
+  if(!dates.length) return null;
+  const total = dates.reduce((a,d) => a + scoreOn(playerName,d).score, 0);
+  return total / dates.length;
+}
+
+// Average score for a team over an array of dates
+function teamAvgOverDates(teamKey, dates) {
+  if(!dates.length) return null;
+  const members = TEAMS[teamKey].members;
+  const total = dates.reduce((weekAcc, d) => {
+    const dayAvg = members.reduce((a,name) => a + scoreOn(name,d).score, 0) / members.length;
+    return weekAcc + dayAvg;
+  }, 0);
+  return total / dates.length;
+}
+
+// All dates that have at least one score submitted (across all players)
+function allPlayedDates() {
+  const seen = new Set(allScores.map(s=>s.date));
+  return [...seen].sort();
+}
+
+// Dates in a week that have passed (up to today)
+function playedDatesInWeek(startDs) {
+  const t = today();
+  return weekDays(startDs).filter(d => d <= t);
+}
+
+function avg(n){ return n === null ? '—' : n.toFixed(1); }
+
+// ═══════════════════════════════════════
+// PARSER
+// ═══════════════════════════════════════
 function parseShareText(raw) {
   if(!raw || !raw.trim()) return null;
-
-  // Strip any hidden/special unicode characters except emojis and normal text
-  const cleaned = raw.replace(/\r/g, '').trim();
-  const lines = cleaned.split('\n').map(l => l.trim()).filter(Boolean);
+  const cleaned = raw.replace(/\r/g,'').trim();
+  const lines = cleaned.split('\n').map(l=>l.trim()).filter(Boolean);
   if(lines.length < 3) return null;
 
-  // ── DATE: scan all lines for a month name + day number ──
   const months = {january:0,february:1,march:2,april:3,may:4,june:5,
                   july:6,august:7,september:8,october:9,november:10,december:11,
-                  jan:0,feb:1,mar:2,apr:3,may:4,jun:5,
-                  jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+                  jan:0,feb:1,mar:2,apr:3,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
   let dateStr = null;
-  for(const line of lines) {
+  for(const line of lines){
     const m = line.match(/([a-zA-Z]+)\s+(\d{1,2})/);
-    if(m) {
-      const mIdx = months[m[1].toLowerCase()];
-      if(mIdx !== undefined) {
-        const year = new Date().getFullYear();
-        dateStr = `${year}-${pad(mIdx+1)}-${pad(parseInt(m[2]))}`;
-        break;
-      }
-    }
+    if(m){ const idx=months[m[1].toLowerCase()]; if(idx!==undefined){ dateStr=`${new Date().getFullYear()}-${pad(idx+1)}-${pad(parseInt(m[2]))}`;break; }}
   }
   if(!dateStr) return null;
 
-  // ── FINAL SCORE: scan all lines for "score: NNN" or just last number ──
   let finalScore = null;
-  for(const line of lines) {
-    const m = line.match(/score[:\s]+(\d+)/i);
-    if(m) { finalScore = parseInt(m[1]); break; }
+  for(const line of lines){
+    const m=line.match(/score[:\s]+(\d+)/i);
+    if(m){finalScore=parseInt(m[1]);break;}
   }
   if(!finalScore) return null;
 
-  // ── ROUNDS: find the line with 5 numbers in it ──
   let rounds = null;
-  for(const line of lines) {
-    // Extract all numbers from the line
-    const nums = [...line.matchAll(/(\d+)/g)].map(m => parseInt(m[1]));
-    if(nums.length !== 5) continue;
-
-    // Extract emojis — grab everything between/after the numbers
-    const segments = line.split(/\d+/).map(s => s.trim()).filter(Boolean);
-
-    rounds = nums.map((score, i) => ({
-      score,
-      emoji: segments[i] || '🎯'
-    }));
+  for(const line of lines){
+    const nums=[...line.matchAll(/(\d+)/g)].map(m=>parseInt(m[1]));
+    if(nums.length!==5) continue;
+    const segments=line.split(/\d+/).map(s=>s.trim()).filter(Boolean);
+    rounds=nums.map((score,i)=>({score,emoji:segments[i]||'🎯'}));
     break;
   }
   if(!rounds) return null;
-
-  return { dateStr, rounds, finalScore };
+  return {dateStr,rounds,finalScore};
 }
 
-// Live parse as user types/pastes
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('paste-box').addEventListener('input', onPasteInput);
-  document.getElementById('player-sel').addEventListener('change', checkAlreadySubmitted);
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('paste-box').addEventListener('input',onPasteInput);
+  document.getElementById('player-sel').addEventListener('change',checkAlreadySubmitted);
 });
 
-function onPasteInput() {
-  const raw = document.getElementById('paste-box').value;
-  const result = parseShareText(raw);
-  const preview = document.getElementById('parse-preview');
-  const errEl   = document.getElementById('parse-error');
-
-  if(!raw.trim()) {
-    preview.style.display = 'none';
-    errEl.style.display   = 'none';
-    parsedData = null;
-    return;
-  }
-
-  if(!result) {
-    preview.style.display = 'none';
-    errEl.style.display   = 'block';
-    parsedData = null;
-    return;
-  }
-
-  parsedData = result;
-  errEl.style.display = 'none';
-
-  // populate preview
-  document.getElementById('prev-date').textContent = fmtDate(result.dateStr).toUpperCase();
-  document.getElementById('prev-rounds').innerHTML = result.rounds.map((r,i) =>
-    `<div class="round-chip">
-       <div class="r-score">${r.score}</div>
-       <div class="r-emoji">${r.emoji}</div>
-       <div class="r-label">RD ${i+1}</div>
-     </div>`
-  ).join('');
-  document.getElementById('prev-final').innerHTML =
-    `Final score: <strong>${result.finalScore}</strong>`;
-  preview.style.display = 'block';
+function onPasteInput(){
+  const raw=document.getElementById('paste-box').value;
+  const preview=document.getElementById('parse-preview');
+  const errEl=document.getElementById('parse-error');
+  if(!raw.trim()){preview.style.display='none';errEl.style.display='none';parsedData=null;return;}
+  const lines=raw.trim().split('\n').map(l=>l.trim()).filter(Boolean);
+  if(lines.length<3){preview.style.display='none';errEl.style.display='none';parsedData=null;return;}
+  const result=parseShareText(raw);
+  if(!result){preview.style.display='none';errEl.style.display='block';parsedData=null;return;}
+  parsedData=result;errEl.style.display='none';
+  document.getElementById('prev-date').textContent=fmtDate(result.dateStr).toUpperCase();
+  document.getElementById('prev-rounds').innerHTML=result.rounds.map((r,i)=>`<div class="round-chip"><div class="r-score">${r.score}</div><div class="r-emoji">${r.emoji}</div><div class="r-label">RD ${i+1}</div></div>`).join('');
+  document.getElementById('prev-final').innerHTML=`Final score: <strong>${result.finalScore}</strong>`;
+  preview.style.display='block';
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════
 // SUBMIT
-// ═══════════════════════════════════════════════════════════════════
-async function submitScore() {
-  const player = document.getElementById('player-sel').value;
-  if(!player)     { showToast('Select your name first', true); return; }
-  if(!parsedData) { showToast('Paste a valid MapTap share text', true); return; }
-
-  const btn = document.getElementById('btn-submit');
-  btn.disabled = true; btn.textContent = 'Saving…';
-
-  try {
-    await db.collection('scores').add({
-      player,
-      date:       parsedData.dateStr,
-      rounds:     parsedData.rounds,       // [{score, emoji}, …]
-      finalScore: parsedData.finalScore,
-      ts: firebase.firestore.FieldValue.serverTimestamp(),
-    });
+// ═══════════════════════════════════════
+async function submitScore(){
+  const player=document.getElementById('player-sel').value;
+  if(!player){showToast('Select your name first',true);return;}
+  if(!parsedData){showToast('Paste a valid MapTap share text',true);return;}
+  const btn=document.getElementById('btn-submit');
+  btn.disabled=true;btn.textContent='Saving…';
+  try{
+    await db.collection('scores').add({player,date:parsedData.dateStr,rounds:parsedData.rounds,finalScore:parsedData.finalScore,ts:firebase.firestore.FieldValue.serverTimestamp()});
     showToast(`✓ ${player} — ${parsedData.finalScore} pts saved`);
-    document.getElementById('paste-box').value = '';
-    document.getElementById('parse-preview').style.display = 'none';
-    parsedData = null;
-    checkAlreadySubmitted();
-  } catch(e) {
-    showToast('Error saving — check Firebase', true);
-    console.error(e);
-  } finally {
-    btn.disabled = false; btn.textContent = 'Submit Score';
-  }
+    document.getElementById('paste-box').value='';
+    document.getElementById('parse-preview').style.display='none';
+    parsedData=null;checkAlreadySubmitted();
+  }catch(e){showToast('Error saving — check Firebase',true);console.error(e);}
+  finally{btn.disabled=false;btn.textContent='Submit Score';}
 }
 
-function checkAlreadySubmitted() {
-  const player  = document.getElementById('player-sel').value;
-  const notice  = document.getElementById('already-notice');
-  if(!player) { notice.style.display='none'; return; }
-  const existing = allScores.find(s => s.player===player && s.date===today());
-  notice.style.display = existing ? 'block' : 'none';
+function checkAlreadySubmitted(){
+  const player=document.getElementById('player-sel').value;
+  const notice=document.getElementById('already-notice');
+  if(!player){notice.style.display='none';return;}
+  notice.style.display=allScores.find(s=>s.player===player&&s.date===today())?'block':'none';
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════
 // FIREBASE LISTENERS
-// ═══════════════════════════════════════════════════════════════════
-function startListeners() {
-  const cutoff = last7()[0];
-
-  // Scores listener
+// ═══════════════════════════════════════
+function startListeners(){
+  // Load all scores (no date cutoff — needed for all-time stats)
   db.collection('scores')
-    .where('date','>=',cutoff)
     .orderBy('date','desc')
     .orderBy('ts','desc')
-    .onSnapshot(snap => {
-      // Deduplicate: keep latest submission per player per day
-      const seen = {}, rows = [];
-      snap.forEach(doc => {
-        const d = doc.data(); d._id = doc.id;
-        const key = `${d.player}::${d.date}`;
-        if(!seen[key]) { seen[key]=true; rows.push(d); }
-      });
-      allScores = rows;
+    .onSnapshot(snap=>{
+      const seen={},rows=[];
+      snap.forEach(doc=>{const d=doc.data();d._id=doc.id;const key=`${d.player}::${d.date}`;if(!seen[key]){seen[key]=true;rows.push(d);}});
+      allScores=rows;
       setStatus(`Updated ${new Date().toLocaleTimeString()}`);
       updateProgress();
-      const tab = activeTab();
-      if(tab==='daily')   renderDaily();
-      if(tab==='weekly')  renderWeekly();
-      if(tab==='teams')   renderTeams();
-      if(tab==='submit')  checkAlreadySubmitted();
+      const tab=activeTab();
+      if(tab==='daily') renderDaily();
+      if(tab==='individual') renderIndividual();
+      if(tab==='teams') renderTeams();
+      if(tab==='submit') checkAlreadySubmitted();
       if(tab==='history') renderHistory();
-    }, err => { setStatus('Connection error'); console.error(err); });
+    },err=>{setStatus('Connection error');console.error(err);});
 
-  // Cities listener
-  db.collection('cities')
-    .where('date','>=',cutoff)
-    .onSnapshot(snap => {
-      allCities = {};
-      snap.forEach(doc => { allCities[doc.data().date] = doc.data().cities; });
-      const tab = activeTab();
-      if(tab==='daily')   renderDaily();
-      if(tab==='history') renderHistory();
-    });
+  // Cities — load all time too (history needs them)
+  db.collection('cities').onSnapshot(snap=>{
+    allCities={};
+    snap.forEach(doc=>{allCities[doc.data().date]=doc.data().cities;});
+    const tab=activeTab();
+    if(tab==='daily') renderDaily();
+    if(tab==='history') renderHistory();
+  });
 }
 
-function setStatus(msg){ document.getElementById('status-txt').textContent = msg; }
-function activeTab(){
-  return document.querySelector('.section.active')?.id?.replace('tab-','') ?? '';
+function setStatus(msg){document.getElementById('status-txt').textContent=msg;}
+function activeTab(){return document.querySelector('.section.active')?.id?.replace('tab-','')||'';}
+
+function updateProgress(){
+  const count=allScores.filter(s=>s.date===today()).length;
+  const pct=(count/TOTAL_PLAYERS*100).toFixed(1);
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('progress-label').textContent=`${count} / ${TOTAL_PLAYERS} submitted today`;
 }
 
-function updateProgress() {
-  const t = today();
-  const count = allScores.filter(s=>s.date===t).length;
-  const pct   = (count / TOTAL_PLAYERS * 100).toFixed(1);
-  document.getElementById('progress-fill').style.width = pct + '%';
-  document.getElementById('progress-label').textContent =
-    `${count} / ${TOTAL_PLAYERS} submitted today`;
-}
-
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════
 // TAB SWITCHING
-// ═══════════════════════════════════════════════════════════════════
-function showTab(name) {
+// ═══════════════════════════════════════
+function showTab(name){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   document.querySelector(`nav button[onclick="showTab('${name}')"]`).classList.add('active');
-  if(name==='daily')   renderDaily();
-  if(name==='weekly')  renderWeekly();
-  if(name==='teams')   renderTeams();
-  if(name==='history') renderHistory();
-  if(name==='submit')  checkAlreadySubmitted();
+  if(name==='daily')      renderDaily();
+  if(name==='individual') renderIndividual();
+  if(name==='teams')      renderTeams();
+  if(name==='history')    renderHistory();
+  if(name==='submit')     checkAlreadySubmitted();
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════
+// SUB-TAB SWITCHING
+// ═══════════════════════════════════════
+let indSubTab   = 'current';
+let teamSubTab  = 'current';
+
+function showIndSub(name){
+  indSubTab = name;
+  document.querySelectorAll('#tab-individual .sub-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`#tab-individual .sub-btn[onclick="showIndSub('${name}')"]`).classList.add('active');
+  ['current','previous','alltime'].forEach(s=>{
+    document.getElementById('ind-'+s).style.display = s===name?'block':'none';
+  });
+  renderIndividual();
+}
+
+function showTeamSub(name){
+  teamSubTab = name;
+  document.querySelectorAll('#tab-teams .sub-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`#tab-teams .sub-btn[onclick="showTeamSub('${name}')"]`).classList.add('active');
+  ['current','previous','alltime','trophy'].forEach(s=>{
+    document.getElementById('team-'+s).style.display = s===name?'block':'none';
+  });
+  renderTeams();
+}
+
+// ═══════════════════════════════════════
 // RENDER HELPERS
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════
 function rankCell(i){
   if(i===0) return `<td class="rank-no rank-1">1</td>`;
   if(i===1) return `<td class="rank-no rank-2">2</td>`;
   if(i===2) return `<td class="rank-no rank-3">3</td>`;
   return `<td class="rank-no">${i+1}</td>`;
 }
-
-function teamTag(name){
-  const k = teamOf(name);
-  if(!k) return '';
-  return `<span class="ttag ${TEAMS[k].cls}">${k}</span>`;
-}
-
+function teamTag(name){const k=teamOf(name);if(!k)return'';return`<span class="ttag ${TEAMS[k].cls}">${k}</span>`;}
 function roundMinis(rounds){
-  if(!rounds||!rounds.length) return '<span style="color:var(--muted);font-size:11px;font-family:var(--font-m)">no round data</span>';
-  return rounds.map(r =>
-    `<div class="r-mini"><span>${r.score}</span><span class="em">${r.emoji}</span></div>`
-  ).join('');
+  if(!rounds||!rounds.length) return '<span style="color:var(--muted);font-size:11px;font-family:var(--fm)">no round data</span>';
+  return rounds.map(r=>`<div class="r-mini"><span>${r.score}</span><span class="em">${r.emoji}</span></div>`).join('');
 }
-
-function cityStripHTML(dateStr) {
-  const todaySubs = allScores.filter(s=>s.date===dateStr).length;
-  const cities    = allCities[dateStr];
-  const allIn     = todaySubs >= TOTAL_PLAYERS;
-
-  if(!cities || !cities.length) {
-    return `<div class="city-lock">
-      <span class="lock-icon">🔒</span>
-      <span>Cities hidden until all ${TOTAL_PLAYERS} players submit (${todaySubs}/${TOTAL_PLAYERS})</span>
-    </div>`;
-  }
-  if(!allIn && dateStr===today()) {
-    return `<div class="city-lock">
-      <span class="lock-icon">🔒</span>
-      <span>Cities revealed when all ${TOTAL_PLAYERS} submit (${todaySubs}/${TOTAL_PLAYERS})</span>
-    </div>`;
-  }
-  // reveal
+function cityStripHTML(dateStr){
+  const todaySubs=allScores.filter(s=>s.date===dateStr).length;
+  const cities=allCities[dateStr];
+  const allIn=todaySubs>=TOTAL_PLAYERS;
+  if(!cities||!cities.length) return `<div class="city-lock"><span class="lock-icon">🔒</span><span>Cities hidden until all ${TOTAL_PLAYERS} players submit (${todaySubs}/${TOTAL_PLAYERS})</span></div>`;
+  if(!allIn&&dateStr===today()) return `<div class="city-lock"><span class="lock-icon">🔒</span><span>Cities revealed when all ${TOTAL_PLAYERS} submit (${todaySubs}/${TOTAL_PLAYERS})</span></div>`;
   return `<div class="city-strip">${cities.map(c=>`<div class="city-chip">${c}</div>`).join('')}</div>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════
+const DAY_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// ═══════════════════════════════════════
 // RENDER: DAILY
-// ═══════════════════════════════════════════════════════════════════
-function renderDaily() {
-  const t = today();
-  document.getElementById('daily-date-pill').textContent = fmtDate(t);
-  document.getElementById('city-reveal').innerHTML = cityStripHTML(t);
-
-  const scores = allScores.filter(s=>s.date===t)
-    .sort((a,b)=>b.finalScore-a.finalScore);
-
-  if(!scores.length){
-    document.getElementById('daily-content').innerHTML =
-      `<div class="empty"><div class="empty-icon">📍</div>No scores yet today</div>`;
-    return;
-  }
-
-  const rows = scores.map((s,i) => `
-    <tr>
-      ${rankCell(i)}
-      <td class="pname">${s.player}${teamTag(s.player)}</td>
-      <td class="r score-val">${s.finalScore}</td>
-    </tr>
-    <tr class="rounds-row">
-      <td></td>
-      <td colspan="2"><div class="round-minis">${roundMinis(s.rounds)}</div></td>
-    </tr>`).join('');
-
-  document.getElementById('daily-content').innerHTML = `
-    <table class="lb-table">
-      <thead><tr>
-        <th>#</th><th>Player</th><th class="r">Score</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+// ═══════════════════════════════════════
+function renderDaily(){
+  const t=today();
+  document.getElementById('daily-date-pill').textContent=fmtDate(t);
+  document.getElementById('city-reveal').innerHTML=cityStripHTML(t);
+  const scores=allScores.filter(s=>s.date===t).sort((a,b)=>b.finalScore-a.finalScore);
+  if(!scores.length){document.getElementById('daily-content').innerHTML=`<div class="empty"><div class="empty-icon">📍</div>No scores yet today</div>`;return;}
+  const rows=scores.map((s,i)=>`
+    <tr>${rankCell(i)}<td class="pname">${s.player}${teamTag(s.player)}</td><td class="r score-val">${s.finalScore}</td></tr>
+    <tr class="rounds-row"><td></td><td colspan="2"><div class="round-minis">${roundMinis(s.rounds)}</div></td></tr>`).join('');
+  document.getElementById('daily-content').innerHTML=`<table class="lb-table"><thead><tr><th>#</th><th>Player</th><th class="r">Score</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// RENDER: WEEKLY
-// ═══════════════════════════════════════════════════════════════════
-function renderWeekly() {
-  const days = last7();
-  const playerData = PLAYERS.map(p => {
-    const dayScores = days.map(d => {
-      const e = allScores.find(s=>s.player===p.name && s.date===d);
-      return e ? e.finalScore : null;
-    });
-    return { ...p, dayScores, total: dayScores.reduce((a,v)=>a+(v??0),0) };
-  }).sort((a,b)=>b.total-a.total);
+// ═══════════════════════════════════════
+// RENDER: INDIVIDUAL
+// ═══════════════════════════════════════
+function renderIndividual(){
+  if(indSubTab==='current')  renderIndCurrent();
+  if(indSubTab==='previous') renderIndPrevious();
+  if(indSubTab==='alltime')  renderIndAllTime();
+}
 
-  const maxTotal = Math.max(...playerData.map(p=>p.total), 1);
+function renderIndCurrent(){
+  const ws  = weekStart(today());
+  const days = weekDays(ws);
+  const t    = today();
+  const playedDays = days.filter(d=>d<=t);
 
-  const html = playerData.map(p => {
-    const pct = (p.total/maxTotal*100).toFixed(1);
-    const dayHtml = days.map((d,i) => {
-      const v = p.dayScores[i];
-      const [,,day] = d.split('-');
-      return `<div class="w-day">
-        <div class="wd-label">${Number(day)}</div>
-        <div class="wd-score ${v===null?'none':''}">${v !== null ? v : '·'}</div>
-      </div>`;
+  const playerData = PLAYERS.map(p=>{
+    const dayScores = days.map(d=>scoreOn(p.name,d));
+    const playedAvg = playedDays.length ? playerAvgOverDates(p.name, playedDays) : null;
+    return { ...p, dayScores, playedAvg };
+  }).sort((a,b)=>(b.playedAvg||0)-(a.playedAvg||0));
+
+  const weekLabel = `${fmtShort(ws)} – ${fmtShort(weekEnd(ws))}`;
+
+  // Day-of-week header labels
+  const dayHeaderCells = days.map((d,i)=>`<div class="day-cell"><div class="dc-label">${DAY_LABELS[i]}</div><div class="dc-label" style="font-size:8px">${fmtShort(d)}</div></div>`).join('');
+
+  const playerHtml = playerData.map((p,idx)=>{
+    const dayCells = p.dayScores.map((s,i)=>{
+      const isPast = days[i] <= t;
+      const cls = !isPast ? '' : s.submitted ? '' : 'default';
+      const label = !isPast ? '–' : s.score;
+      return `<div class="day-cell"><div class="dc-score ${cls}">${label}</div></div>`;
     }).join('');
-    return `<div class="w-player">
-      <div class="w-header">
-        <span class="w-name">${p.name} <span class="ttag ${TEAMS[p.team].cls}">${p.team}</span></span>
-        <span class="w-total">${p.total}</span>
-      </div>
-      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-      <div class="w-days">${dayHtml}</div>
-    </div>`;
-  }).join('');
 
-  document.getElementById('weekly-content').innerHTML = html ||
-    `<div class="empty"><div class="empty-icon">📅</div>No data this week</div>`;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// RENDER: TEAMS
-// ═══════════════════════════════════════════════════════════════════
-function renderTeams() {
-  const days = last7();
-  const t = today();
-
-  const teamTotals = Object.entries(TEAMS).map(([k,team]) => {
-    const memberRows = team.members.map(name => {
-      const total = allScores.filter(s=>s.player===name&&days.includes(s.date))
-        .reduce((a,s)=>a+s.finalScore,0);
-      const todayE = allScores.find(s=>s.player===name&&s.date===t);
-      return { name, total, today: todayE?.finalScore ?? null };
-    }).sort((a,b)=>b.total-a.total);
-
-    const teamTotal = memberRows.reduce((a,m)=>a+m.total,0);
-    return { k, team, memberRows, teamTotal };
-  }).sort((a,b)=>b.teamTotal-a.teamTotal);
-
-  const html = teamTotals.map(({ k,team,memberRows,teamTotal }) => {
-    const mHtml = memberRows.map(m => `
-      <div class="tc-row">
-        <span>${m.name}</span>
-        <div style="display:flex;align-items:center;gap:14px">
-          ${m.today!==null?`<span class="tc-today">+${m.today} today</span>`:''}
-          <span class="tc-score">${m.total}</span>
+    return `<div class="ind-player">
+      <div class="ind-head" onclick="toggleInd(this)">
+        <div>
+          <span class="ind-name">${p.name}</span>
+          <span class="ttag ${TEAMS[p.team].cls}">${p.team}</span>
         </div>
-      </div>`).join('');
-    return `<div class="team-card">
-      <div class="tc-head">
-        <span class="tc-name ${team.cls}">${team.name}</span>
-        <span class="tc-total">${teamTotal}</span>
-      </div>${mHtml}
+        <div class="ind-stats">
+          <span class="ind-avg">${avg(p.playedAvg)}</span>
+          <span class="ind-sub-avg">wk avg</span>
+        </div>
+      </div>
+      <div class="ind-body">
+        <div class="day-grid">
+          ${dayHeaderCells}
+          ${dayCells}
+        </div>
+      </div>
     </div>`;
   }).join('');
 
-  document.getElementById('teams-content').innerHTML = html;
+  document.getElementById('ind-current').innerHTML=`
+    <div class="week-header">
+      <span class="week-label">This Week</span>
+      <span class="week-range">${weekLabel}</span>
+    </div>
+    <p style="font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:14px">
+      Tap a player to see daily scores. <span style="color:var(--coral)">Red</span> = no submission (500 used).
+    </p>
+    ${playerHtml||'<div class="empty"><div class="empty-icon">📅</div>No scores this week yet</div>'}`;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// RENDER: HISTORY
-// ═══════════════════════════════════════════════════════════════════
-function renderHistory() {
-  const dateInput = document.getElementById('hist-date');
-  const ds = dateInput.value;
-  if(!ds) {
-    document.getElementById('history-content').innerHTML =
-      `<div class="hist-empty">Select a date above to view past scores</div>`;
+function renderIndPrevious(){
+  const currentWs = weekStart(today());
+  const weeks = allWeekStarts().filter(ws=>ws < currentWs);
+
+  if(!weeks.length){
+    document.getElementById('ind-previous').innerHTML=`<div class="empty"><div class="empty-icon">📅</div>No previous weeks yet</div>`;
     return;
   }
 
-  const scores = allScores.filter(s=>s.date===ds)
-    .sort((a,b)=>b.finalScore-a.finalScore);
+  const html = weeks.slice().reverse().map(ws=>{
+    const days = weekDays(ws);
+    const t = today();
+    const played = days.filter(d=>d<=t && d<currentWs); // only past days, not this week
 
-  // city reveal: always show on history (game is already done)
-  let cityHtml = '';
-  const cities = allCities[ds];
-  if(cities && cities.length) {
-    cityHtml = `<div style="margin-bottom:16px">${cityStripForHistory(ds)}</div>`;
-  }
+    const playerData = PLAYERS.map(p=>({
+      ...p,
+      weekAvg: playerAvgOverDates(p.name, played)
+    })).sort((a,b)=>(b.weekAvg||0)-(a.weekAvg||0));
 
-  if(!scores.length) {
-    document.getElementById('history-content').innerHTML =
-      cityHtml + `<div class="hist-empty">No scores found for ${fmtDate(ds)}</div>`;
+    const rows = playerData.map((p,i)=>`
+      <tr>
+        ${rankCell(i)}
+        <td class="pname">${p.name}<span class="ttag ${TEAMS[p.team].cls}">${p.team}</span></td>
+        <td class="r score-val">${avg(p.weekAvg)}</td>
+      </tr>`).join('');
+
+    return `<div class="prev-week-block">
+      <div class="prev-week-label">${fmtShort(ws)} – ${fmtShort(weekEnd(ws))}</div>
+      <table class="lb-table">
+        <thead><tr><th>#</th><th>Player</th><th class="r">Avg</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  document.getElementById('ind-previous').innerHTML = html;
+}
+
+function renderIndAllTime(){
+  const allDates = allPlayedDates();
+
+  const playerData = PLAYERS.map(p=>({
+    ...p,
+    allTimeAvg: playerAvgOverDates(p.name, allDates),
+    gamesPlayed: allScores.filter(s=>s.player===p.name).length,
+    totalDays: allDates.length
+  })).sort((a,b)=>(b.allTimeAvg||0)-(a.allTimeAvg||0));
+
+  if(!allDates.length){
+    document.getElementById('ind-alltime').innerHTML=`<div class="empty"><div class="empty-icon">📊</div>No data yet</div>`;
     return;
   }
 
-  const rows = scores.map((s,i) => `
-    <tr>
-      ${rankCell(i)}
-      <td class="pname">${s.player}${teamTag(s.player)}</td>
-      <td class="r score-val">${s.finalScore}</td>
-    </tr>
-    <tr class="rounds-row">
-      <td></td>
-      <td colspan="2"><div class="round-minis">${roundMinis(s.rounds)}</div></td>
-    </tr>`).join('');
-
-  document.getElementById('history-content').innerHTML = `
-    <div class="date-pill">${fmtDate(ds)}</div>
-    ${cityHtml}
-    <table class="lb-table">
-      <thead><tr><th>#</th><th>Player</th><th class="r">Score</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-}
-
-// History always shows cities (it's a past date, game is over)
-function cityStripForHistory(ds) {
-  const cities = allCities[ds];
-  if(!cities||!cities.length) return '';
-  return `<div class="city-strip">${cities.map(c=>`<div class="city-chip">${c}</div>`).join('')}</div>`;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// ADMIN
-// ═══════════════════════════════════════════════════════════════════
-function checkAdminPw() {
-  const pw = document.getElementById('admin-pw-input').value;
-  if(pw === ADMIN_PASSWORD) {
-    adminUnlocked = true;
-    document.getElementById('admin-lock').style.display  = 'none';
-    document.getElementById('admin-panel').style.display = 'block';
-    buildAdminPanel();
-  } else {
-    showToast('Incorrect password', true);
-  }
-}
-
-function buildAdminPanel() {
-  // City inputs
-  const wrap = document.getElementById('city-inputs-wrap');
-  wrap.innerHTML = [1,2,3,4,5].map(n => `
-    <div class="form-group">
-      <label class="field-label">City ${n}</label>
-      <input type="text" id="city-${n}" placeholder="e.g. Tokyo">
+  const rows = playerData.map((p,i)=>`
+    <div class="alltime-row">
+      <div>
+        <span class="ind-name">${p.name}</span>
+        <span class="ttag ${TEAMS[p.team].cls}">${p.team}</span>
+        <div class="at-sub" style="margin-top:2px">${p.gamesPlayed} of ${p.totalDays} days submitted</div>
+      </div>
+      <div class="at-avg">${avg(p.allTimeAvg)}</div>
     </div>`).join('');
 
-  document.getElementById('admin-city-date').value = today();
-
-  // Delete player select
-  const delSel = document.getElementById('admin-del-player');
-  delSel.innerHTML = '<option value="">— select —</option>' +
-    PLAYERS.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
-  document.getElementById('admin-del-date').value = today();
+  document.getElementById('ind-alltime').innerHTML=`
+    <div class="week-header" style="margin-top:0">
+      <span class="week-label">All Time Avg</span>
+      <span class="week-range">${allDates.length} days played</span>
+    </div>
+    <p style="font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:14px">
+      Missing days count as ${DEFAULT_SCORE} in averages.
+    </p>
+    ${rows}`;
 }
 
-async function saveCities() {
-  const ds = document.getElementById('admin-city-date').value;
-  const cities = [1,2,3,4,5].map(n =>
-    document.getElementById(`city-${n}`).value.trim()
-  ).filter(Boolean);
+function toggleInd(headEl){
+  const body = headEl.nextElementSibling;
+  body.classList.toggle('open');
+}
 
-  if(!ds)          { showToast('Pick a date', true); return; }
-  if(cities.length !== 5) { showToast('Enter all 5 city names', true); return; }
+// ═══════════════════════════════════════
+// RENDER: TEAMS
+// ═══════════════════════════════════════
+function renderTeams(){
+  if(teamSubTab==='current')  renderTeamCurrent();
+  if(teamSubTab==='previous') renderTeamPrevious();
+  if(teamSubTab==='alltime')  renderTeamAllTime();
+  if(teamSubTab==='trophy')   renderTeamTrophy();
+}
 
-  try {
-    await db.collection('cities').doc(ds).set({ date: ds, cities });
-    showToast('✓ Cities saved for ' + fmtDate(ds));
-    [1,2,3,4,5].forEach(n => { document.getElementById(`city-${n}`).value=''; });
-  } catch(e) {
-    showToast('Error saving cities', true);
-    console.error(e);
+function renderTeamCurrent(){
+  const ws   = weekStart(today());
+  const days = weekDays(ws);
+  const t    = today();
+  const playedDays = days.filter(d=>d<=t);
+
+  const teamData = Object.entries(TEAMS).map(([k,team])=>({
+    k, team,
+    weekAvg:  teamAvgOverDates(k, playedDays),
+    dayAvgs:  days.map(d => d<=t ? teamAvgOverDates(k,[d]) : null)
+  })).sort((a,b)=>(b.weekAvg||0)-(a.weekAvg||0));
+
+  const weekLabel = `${fmtShort(ws)} – ${fmtShort(weekEnd(ws))}`;
+
+  const html = teamData.map((td,rank)=>{
+    const rankBadge = rank===0?`<span class="tb-rank-badge tbr-1">🥇 1st</span>`:
+                      rank===1?`<span class="tb-rank-badge tbr-2">🥈 2nd</span>`:
+                               `<span class="tb-rank-badge tbr-3">🥉 3rd</span>`;
+
+    const dayCells = days.map((d,i)=>{
+      const v = td.dayAvgs[i];
+      return `<div class="tdc">
+        <div class="tdc-label">${DAY_LABELS[i]}</div>
+        <div class="tdc-score">${v!==null ? v.toFixed(1) : '–'}</div>
+      </div>`;
+    }).join('');
+
+    // Member breakdown for this week
+    const memberRows = td.team.members.map(name=>{
+      const wAvg = playerAvgOverDates(name, playedDays);
+      return `<div class="alltime-row" style="padding:8px 16px">
+        <span style="font-size:13px">${name}</span>
+        <span style="font-family:var(--fm);font-size:12px;color:var(--subtle)">${avg(wAvg)}</span>
+      </div>`;
+    }).join('');
+
+    return `<div class="team-block">
+      <div class="team-block-head">
+        <span class="tb-name ${td.team.cls}">${td.team.name}</span>
+        <div class="tb-badges">
+          ${rankBadge}
+          <span class="tb-avg">${avg(td.weekAvg)}</span>
+        </div>
+      </div>
+      <div class="team-day-grid">${dayCells}</div>
+      <div style="border-top:1px solid var(--border)">${memberRows}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('team-current').innerHTML=`
+    <div class="week-header" style="margin-top:0">
+      <span class="week-label">This Week</span>
+      <span class="week-range">${weekLabel}</span>
+    </div>
+    <p style="font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:14px">
+      Team avg per day shown. Missing scores count as ${DEFAULT_SCORE}.
+    </p>
+    ${html}`;
+}
+
+function renderTeamPrevious(){
+  const currentWs = weekStart(today());
+  const weeks = allWeekStarts().filter(ws=>ws<currentWs);
+
+  if(!weeks.length){
+    document.getElementById('team-previous').innerHTML=`<div class="empty"><div class="empty-icon">📅</div>No previous weeks yet</div>`;
+    return;
   }
+
+  const html = weeks.slice().reverse().map(ws=>{
+    const days   = weekDays(ws);
+    const played = days.filter(d=>d<currentWs);
+
+    const teamData = Object.entries(TEAMS).map(([k,team])=>({
+      k,team,
+      weekAvg: teamAvgOverDates(k,played)
+    })).sort((a,b)=>(b.weekAvg||0)-(a.weekAvg||0));
+
+    const rows = teamData.map((td,i)=>`
+      <tr>
+        ${rankCell(i)}
+        <td class="pname ${td.team.cls}">${td.team.name}</td>
+        <td class="r score-val">${avg(td.weekAvg)}</td>
+      </tr>`).join('');
+
+    return `<div class="prev-week-block">
+      <div class="prev-week-label">${fmtShort(ws)} – ${fmtShort(weekEnd(ws))}</div>
+      <table class="lb-table">
+        <thead><tr><th>#</th><th>Team</th><th class="r">Avg</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  document.getElementById('team-previous').innerHTML = html;
 }
 
-async function adminDeleteScore() {
-  const player = document.getElementById('admin-del-player').value;
-  const ds     = document.getElementById('admin-del-date').value;
-  if(!player || !ds) { showToast('Select player and date', true); return; }
+function renderTeamAllTime(){
+  const allDates = allPlayedDates();
 
-  if(!confirm(`Remove ${player}'s score on ${fmtDate(ds)}?`)) return;
-
-  // Find the doc(s) in Firestore and delete
-  try {
-    const snap = await db.collection('scores')
-      .where('player','==',player)
-      .where('date','==',ds)
-      .get();
-    const batch = db.batch();
-    snap.forEach(doc => batch.delete(doc.ref));
-    await batch.commit();
-    showToast(`✓ Removed ${player}'s score on ${fmtDate(ds)}`);
-  } catch(e) {
-    showToast('Error deleting', true);
-    console.error(e);
+  if(!allDates.length){
+    document.getElementById('team-alltime').innerHTML=`<div class="empty"><div class="empty-icon">📊</div>No data yet</div>`;
+    return;
   }
+
+  const teamData = Object.entries(TEAMS).map(([k,team])=>({
+    k,team,
+    allTimeAvg: teamAvgOverDates(k,allDates)
+  })).sort((a,b)=>(b.allTimeAvg||0)-(a.allTimeAvg||0));
+
+  const rows = teamData.map((td,i)=>`
+    <tr>
+      ${rankCell(i)}
+      <td class="pname ${td.team.cls}">${td.team.name}</td>
+      <td class="r score-val">${avg(td.allTimeAvg)}</td>
+    </tr>`).join('');
+
+  document.getElementById('team-alltime').innerHTML=`
+    <div class="week-header" style="margin-top:0">
+      <span class="week-label">All Time Avg</span>
+      <span class="week-range">${allDates.length} days played</span>
+    </div>
+    <table class="lb-table" style="margin-top:10px">
+      <thead><tr><th>#</th><th>Team</th><th class="r">Avg</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// TOAST
-// ═══════════════════════════════════════════════════════════════════
-let _toastTimer;
-function showToast(msg, err=false) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className   = 'show' + (err?' err':'');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(()=>{ t.className=''; }, 2800);
-}
+function renderTeamTrophy(){
+  const currentWs = weekStart(today());
+  const weeks = allWeekStarts().filter(ws=>ws<currentWs);
 
-// ═══════════════════════════════════════════════════════════════════
-// BUILD PLAYER SELECT
-// ═══════════════════════════════════════════════════════════════════
-function buildPlayerSelect() {
-  const sel = document.getElementById('player-sel');
-  const groups = Object.entries(TEAMS).map(([k,team]) => {
-    const opts = team.members.map(name =>
-      `<option value="${name}">${name}</option>`).join('');
-    return `<optgroup label="${team.name}">${opts}</optgroup>`;
+  // Tally: for each completed week, find which team finished 1st/2nd/3rd
+  const tally = {};
+  Object.keys(TEAMS).forEach(k=>{ tally[k]={gold:0,silver:0,bronze:0}; });
+
+  weeks.forEach(ws=>{
+    const days   = weekDays(ws);
+    const played = days.filter(d=>d<currentWs);
+    const teamData = Object.entries(TEAMS).map(([k])=>({
+      k, avg: teamAvgOverDates(k,played)
+    })).sort((a,b)=>(b.avg||0)-(a.avg||0));
+
+    if(teamData[0]) tally[teamData[0].k].gold++;
+    if(teamData[1]) tally[teamData[1].k].silver++;
+    if(teamData[2]) tally[teamData[2].k].bronze++;
   });
-  sel.innerHTML = '<option value="">— select player —</option>' + groups.join('');
-  sel.addEventListener('change', checkAlreadySubmitted);
+
+  if(!weeks.length){
+    document.getElementById('team-trophy').innerHTML=`<div class="empty"><div class="empty-icon">🏆</div>Trophies awarded after first full week</div>`;
+    return;
+  }
+
+  // Sort by gold, then silver, then bronze
+  const sorted = Object.entries(TEAMS).map(([k,team])=>({k,team,...tally[k]}))
+    .sort((a,b)=>b.gold-a.gold||b.silver-a.silver||b.bronze-a.bronze);
+
+  const rows = sorted.map(td=>`
+    <tr>
+      <td class="pname ${td.team.cls}">${td.team.name}</td>
+      <td class="trophy-icons">🥇 × ${td.gold}</td>
+      <td class="trophy-icons">🥈 × ${td.silver}</td>
+      <td class="trophy-icons">🥉 × ${td.bronze}</td>
+    </tr>`).join('');
+
+  // Also list each week's results
+  const weekResults = weeks.slice().reverse().map(ws=>{
+    const days   = weekDays(ws);
+    const played = days.filter(d=>d<currentWs);
+    const teamData = Object.entries(TEAMS).map(([k,team])=>({
+      k,team,avg:teamAvgOverDates(k,played)
+    })).sort((a,b)=>(b.avg||0)-(a.avg||0));
+    const medals = ['🥇','🥈','🥉'];
+    const podium = teamData.map((td,i)=>`${medals[i]} ${td.team.name} <span style="font-family:var(--fm);color:var(--muted)">${avg(td.avg)}</span>`).join('<br>');
+    return `<div class="prev-week-block">
+      <div class="prev-week-label">${fmtShort(ws)} – ${fmtShort(weekEnd(ws))}</div>
+      <div style="font-size:13px;line-height:2">${podium}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('team-trophy').innerHTML=`
+    <div class="week-header" style="margin-top:0">
+      <span class="week-label">Trophy Tally</span>
+      <span class="week-range">${weeks.length} weeks played</span>
+    </div>
+    <table class="trophy-table" style="margin-bottom:24px">
+      <thead><tr><th>Team</th><th>🥇</th><th>🥈</th><th>🥉</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="prev-week-label" style="margin-bottom:14px">WEEK BY WEEK</div>
+    ${weekResults}`;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════════════════
-function init() {
-  const t = today();
-  document.getElementById('submit-sub').textContent = `TODAY · ${fmtDate(t).toUpperCase()}`;
-  document.getElementById('daily-date-pill').textContent = fmtDate(t);
-  // Default history date to yesterday
-  const yest = new Date(); yest.setDate(yest.getDate()-1);
-  document.getElementById('hist-date').value =
-    `${yest.getFullYear()}-${pad(yest.getMonth()+1)}-${pad(yest.getDate())}`;
+// ═══════════════════════════════════════
+// RENDER: HISTORY
+// ═══════════════════════════════════════
+function renderHistory(){
+  const ds=document.getElementById('hist-date').value;
+  if(!ds){document.getElementById('history-content').innerHTML=`<div class="hist-empty">Select a date above to view past scores</div>`;return;}
+  const scores=allScores.filter(s=>s.date===ds).sort((a,b)=>b.finalScore-a.finalScore);
+  const cities=allCities[ds];
+  const cityHtml=cities&&cities.length?`<div style="margin-bottom:16px"><div class="city-strip">${cities.map(c=>`<div class="city-chip">${c}</div>`).join('')}</div></div>`:'';
+  if(!scores.length){document.getElementById('history-content').innerHTML=cityHtml+`<div class="hist-empty">No scores found for ${fmtDate(ds)}</div>`;return;}
+  const rows=scores.map((s,i)=>`
+    <tr>${rankCell(i)}<td class="pname">${s.player}${teamTag(s.player)}</td><td class="r score-val">${s.finalScore}</td></tr>
+    <tr class="rounds-row"><td></td><td colspan="2"><div class="round-minis">${roundMinis(s.rounds)}</div></td></tr>`).join('');
+  document.getElementById('history-content').innerHTML=`<div class="date-pill">${fmtDate(ds)}</div>${cityHtml}<table class="lb-table"><thead><tr><th>#</th><th>Player</th><th class="r">Score</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
 
+// ═══════════════════════════════════════
+// ADMIN
+// ═══════════════════════════════════════
+function checkAdminPw(){
+  const pw=document.getElementById('admin-pw-input').value;
+  if(pw===ADMIN_PASSWORD){
+    document.getElementById('admin-lock').style.display='none';
+    document.getElementById('admin-panel').style.display='block';
+    buildAdminPanel();
+  }else{showToast('Incorrect password',true);}
+}
+function buildAdminPanel(){
+  document.getElementById('city-inputs-wrap').innerHTML=[1,2,3,4,5].map(n=>`<div class="form-group"><label class="field-label">City ${n}</label><input type="text" id="city-${n}" placeholder="e.g. Tokyo"></div>`).join('');
+  document.getElementById('admin-city-date').value=today();
+  document.getElementById('admin-del-player').innerHTML='<option value="">— select —</option>'+PLAYERS.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
+  document.getElementById('admin-del-date').value=today();
+}
+async function saveCities(){
+  const ds=document.getElementById('admin-city-date').value;
+  const cities=[1,2,3,4,5].map(n=>document.getElementById(`city-${n}`).value.trim()).filter(Boolean);
+  if(!ds){showToast('Pick a date',true);return;}
+  if(cities.length!==5){showToast('Enter all 5 city names',true);return;}
+  try{await db.collection('cities').doc(ds).set({date:ds,cities});showToast('✓ Cities saved for '+fmtDate(ds));[1,2,3,4,5].forEach(n=>{document.getElementById(`city-${n}`).value='';});}
+  catch(e){showToast('Error saving cities',true);console.error(e);}
+}
+async function adminDeleteScore(){
+  const player=document.getElementById('admin-del-player').value;
+  const ds=document.getElementById('admin-del-date').value;
+  if(!player||!ds){showToast('Select player and date',true);return;}
+  if(!confirm(`Remove ${player}'s score on ${fmtDate(ds)}?`))return;
+  try{
+    const snap=await db.collection('scores').where('player','==',player).where('date','==',ds).get();
+    const batch=db.batch();snap.forEach(doc=>batch.delete(doc.ref));await batch.commit();
+    showToast(`✓ Removed ${player}'s score on ${fmtDate(ds)}`);
+  }catch(e){showToast('Error deleting',true);console.error(e);}
+}
+
+// ═══════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════
+let _tt;
+function showToast(msg,err=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='show'+(err?' err':'');
+  clearTimeout(_tt);_tt=setTimeout(()=>{t.className='';},2800);
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+function buildPlayerSelect(){
+  const sel=document.getElementById('player-sel');
+  sel.innerHTML='<option value="">— select player —</option>'+
+    Object.entries(TEAMS).map(([k,team])=>`<optgroup label="${team.name}">${team.members.map(name=>`<option value="${name}">${name}</option>`).join('')}</optgroup>`).join('');
+  sel.addEventListener('change',checkAlreadySubmitted);
+}
+
+function init(){
+  const t=today();
+  document.getElementById('submit-sub').textContent=`TODAY · ${fmtDate(t).toUpperCase()}`;
+  document.getElementById('daily-date-pill').textContent=fmtDate(t);
+  const yest=new Date();yest.setDate(yest.getDate()-1);
+  document.getElementById('hist-date').value=`${yest.getFullYear()}-${pad(yest.getMonth()+1)}-${pad(yest.getDate())}`;
   buildPlayerSelect();
   setStatus('Connecting to Firebase…');
   startListeners();
 }
-
 init();
 </script>
 </body>
