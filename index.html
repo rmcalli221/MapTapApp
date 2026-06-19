@@ -907,7 +907,10 @@ function renderTeamCurrent(){
 
     // Member breakdown for this week
     const memberRows = td.team.members.map(name=>{
-      const wAvg = playerSubmittedAvg(name, playedDays);
+      // Use 500 for missed days here — this shows each member's contribution to team score
+      const wAvg = playedDays.length
+        ? playedDays.reduce((a,d) => a + scoreOn(name,d).score, 0) / playedDays.length
+        : null;
       return `<div class="alltime-row" style="padding:8px 16px">
         <span style="font-size:13px">${name}</span>
         <span style="font-family:var(--fm);font-size:12px;color:var(--subtle)">${avg(wAvg)}</span>
