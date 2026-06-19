@@ -461,14 +461,22 @@ function scoreOn(playerName, dateStr) {
   return { score: e ? e.finalScore : DEFAULT_SCORE, submitted: !!e };
 }
 
-// Average score for a player over an array of dates (using 500 for missing)
-function playerAvgOverDates(playerName, dates) {
+// INDIVIDUAL avg: only counts days the player actually submitted (skips missed days).
+// Missed days do NOT drag the average down — they are simply excluded from the calc.
+function playerSubmittedAvg(playerName, dates) {
   if(!dates.length) return null;
-  const total = dates.reduce((a,d) => a + scoreOn(playerName,d).score, 0);
-  return total / dates.length;
+  const submitted = dates.filter(d => allScores.find(s => s.player===playerName && s.date===d));
+  if(!submitted.length) return null;
+  const total = submitted.reduce((a,d) => a + allScores.find(s => s.player===playerName && s.date===d).finalScore, 0);
+  return total / submitted.length;
 }
 
-// Average score for a team over an array of dates
+// How many days a player missed over an array of dates
+function playerMissedDays(playerName, dates) {
+  return dates.filter(d => !allScores.find(s => s.player===playerName && s.date===d)).length;
+}
+
+// TEAM avg: keeps 500 for missing players — missed days still count against team score.
 function teamAvgOverDates(teamKey, dates) {
   if(!dates.length) return null;
   const members = TEAMS[teamKey].members;
@@ -718,8 +726,9 @@ function renderIndCurrent(){
 
   const playerData = PLAYERS.map(p=>{
     const dayScores = days.map(d=>scoreOn(p.name,d));
-    const playedAvg = playedDays.length ? playerAvgOverDates(p.name, playedDays) : null;
-    return { ...p, dayScores, playedAvg };
+    const playedAvg = playedDays.length ? playerSubmittedAvg(p.name, playedDays) : null;
+    const missed    = playerMissedDays(p.name, playedDays);
+    return { ...p, dayScores, playedAvg, missed };
   }).sort((a,b)=>(b.playedAvg||0)-(a.playedAvg||0));
 
   const weekLabel = `${fmtShort(ws)} – ${fmtShort(weekEnd(ws))}`;
@@ -731,15 +740,20 @@ function renderIndCurrent(){
     const dayCells = p.dayScores.map((s,i)=>{
       const isPast = days[i] <= t;
       const cls = !isPast ? '' : s.submitted ? '' : 'default';
-      const label = !isPast ? '–' : s.score;
+      const label = !isPast ? '–' : s.submitted ? s.score : '—';
       return `<div class="day-cell"><div class="dc-score ${cls}">${label}</div></div>`;
     }).join('');
+
+    const missedTxt = p.missed > 0
+      ? `<span style="font-family:var(--fm);font-size:10px;color:var(--coral);margin-left:8px">${p.missed} missed</span>`
+      : '';
 
     return `<div class="ind-player">
       <div class="ind-head" onclick="toggleInd(this)">
         <div>
           <span class="ind-name">${p.name}</span>
           <span class="ttag ${TEAMS[p.team].cls}">${p.team}</span>
+          ${missedTxt}
         </div>
         <div class="ind-stats">
           <span class="ind-avg">${avg(p.playedAvg)}</span>
@@ -761,7 +775,7 @@ function renderIndCurrent(){
       <span class="week-range">${weekLabel}</span>
     </div>
     <p style="font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:14px">
-      Tap a player to see daily scores. <span style="color:var(--coral)">Red</span> = no submission (500 used).
+      Tap a player to see daily scores. Avg only includes days played — missed days excluded. <span style="color:var(--coral)">Red dashes</span> = missed day.
     </p>
     ${playerHtml||'<div class="empty"><div class="empty-icon">📅</div>No scores this week yet</div>'}`;
 }
@@ -780,15 +794,19 @@ function renderIndPrevious(){
     const t = today();
     const played = days.filter(d=>d<=t && d<currentWs); // only past days, not this week
 
-    const playerData = PLAYERS.map(p=>({
-      ...p,
-      weekAvg: playerAvgOverDates(p.name, played)
-    })).sort((a,b)=>(b.weekAvg||0)-(a.weekAvg||0));
+    const playerData = PLAYERS.map(p=>{
+      const missed = playerMissedDays(p.name, played);
+      return {
+        ...p,
+        weekAvg: playerSubmittedAvg(p.name, played),
+        missed
+      };
+    }).sort((a,b)=>(b.weekAvg||0)-(a.weekAvg||0));
 
     const rows = playerData.map((p,i)=>`
       <tr>
         ${rankCell(i)}
-        <td class="pname">${p.name}<span class="ttag ${TEAMS[p.team].cls}">${p.team}</span></td>
+        <td class="pname">${p.name}<span class="ttag ${TEAMS[p.team].cls}">${p.team}</span>${p.missed>0?`<span style="font-family:var(--fm);font-size:9px;color:var(--coral);margin-left:6px">${p.missed} missed</span>`:''}</td>
         <td class="r score-val">${avg(p.weekAvg)}</td>
       </tr>`).join('');
 
@@ -807,12 +825,17 @@ function renderIndPrevious(){
 function renderIndAllTime(){
   const allDates = allPlayedDates();
 
-  const playerData = PLAYERS.map(p=>({
-    ...p,
-    allTimeAvg: playerAvgOverDates(p.name, allDates),
-    gamesPlayed: allScores.filter(s=>s.player===p.name).length,
-    totalDays: allDates.length
-  })).sort((a,b)=>(b.allTimeAvg||0)-(a.allTimeAvg||0));
+  const playerData = PLAYERS.map(p=>{
+    const gamesPlayed = allScores.filter(s=>s.player===p.name).length;
+    const missed      = playerMissedDays(p.name, allDates);
+    return {
+      ...p,
+      allTimeAvg: playerSubmittedAvg(p.name, allDates),
+      gamesPlayed,
+      missed,
+      totalDays: allDates.length
+    };
+  }).sort((a,b)=>(b.allTimeAvg||0)-(a.allTimeAvg||0));
 
   if(!allDates.length){
     document.getElementById('ind-alltime').innerHTML=`<div class="empty"><div class="empty-icon">📊</div>No data yet</div>`;
@@ -824,7 +847,7 @@ function renderIndAllTime(){
       <div>
         <span class="ind-name">${p.name}</span>
         <span class="ttag ${TEAMS[p.team].cls}">${p.team}</span>
-        <div class="at-sub" style="margin-top:2px">${p.gamesPlayed} of ${p.totalDays} days submitted</div>
+        <div class="at-sub" style="margin-top:2px">${p.gamesPlayed} of ${p.totalDays} days submitted${p.missed>0?` · <span style="color:var(--coral)">${p.missed} missed</span>`:''}</div>
       </div>
       <div class="at-avg">${avg(p.allTimeAvg)}</div>
     </div>`).join('');
@@ -835,7 +858,7 @@ function renderIndAllTime(){
       <span class="week-range">${allDates.length} days played</span>
     </div>
     <p style="font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:14px">
-      Missing days count as ${DEFAULT_SCORE} in averages.
+      Avg only counts days played — missed days are excluded and shown separately.
     </p>
     ${rows}`;
 }
@@ -884,7 +907,7 @@ function renderTeamCurrent(){
 
     // Member breakdown for this week
     const memberRows = td.team.members.map(name=>{
-      const wAvg = playerAvgOverDates(name, playedDays);
+      const wAvg = playerSubmittedAvg(name, playedDays);
       return `<div class="alltime-row" style="padding:8px 16px">
         <span style="font-size:13px">${name}</span>
         <span style="font-family:var(--fm);font-size:12px;color:var(--subtle)">${avg(wAvg)}</span>
